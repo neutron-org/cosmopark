@@ -1,0 +1,19 @@
+version: "3"
+services:
+  lsm_val1:
+    image: lsm
+    command:
+      - start
+      - --home=/opt/lsm_val1
+    volumes:
+      - lsm_val1:/opt
+  lsm_val2:
+    image: lsm
+    command:
+      - start
+      - --home=/opt/lsm_val2
+    volumes:
+      - lsm_val2:/opt
+volumes:
+  lsm_val1: null
+  lsm_val2: null
