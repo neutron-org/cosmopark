@@ -21,8 +21,6 @@ const config: CosmoparkConfig = {
         'app_state.staking.params.validator_bond_factor': '10',
         'app_state.slashing.params.downtime_jail_duration': '10s',
         'app_state.slashing.params.signed_blocks_window': '10',
-        'app_state.slashing.params.lash_fraction_downtime':
-          '0.050000000000000000',
       },
       config_opts: {
         'rpc.laddr': 'tcp://127.0.0.1:26657',

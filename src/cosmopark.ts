@@ -40,7 +40,7 @@ export class Cosmopark {
         validators.push(name);
         services[name] = {
           image: network.image,
-          command: ['start', `--home=/opt/${name}`],
+          command: ['start', `--home=/opt`],
           volumes: [`${name}:/opt`],
         };
         volumes[name] = null;

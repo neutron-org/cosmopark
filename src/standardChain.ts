@@ -7,6 +7,10 @@ import {
 import dockerCompose, { IDockerComposeResult } from 'docker-compose';
 import { dockerCommand } from 'docker-cli-js';
 import { rimraf } from 'rimraf';
+import toml from '@iarna/toml';
+import { promises as fs } from 'fs';
+import _ from 'lodash';
+import os from 'os';
 
 export class CosmoparkDefaultChain implements CosmoparkChain {
   type: string;
@@ -27,8 +31,8 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     wallets: Record<string, CosmoparkWallet>,
     mnemonic: string,
   ): Promise<void> {
-    await rimraf('./gentx');
-    await rimraf('./__*.tmp');
+    const tempDir = os.tmpdir() + '/cosmopark';
+    await rimraf(tempDir);
     await dockerCompose.down({
       cwd: process.cwd(),
       log: this.debug,
@@ -54,22 +58,24 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       (n: number) =>
         `${this.config.binary} init val${this.network}${n} --chain-id=${this.config.chain_id} --home=/opt`,
     );
-    //add validators keys and balances
-    await this.executeInAllValidators(
-      (n: number) =>
-        `echo "${mnemonic}" | ${this.config.binary} keys add val${
-          n + 1
-        } --home=/opt --recover --account=${n + 1} --keyring-backend=test`,
-    );
     const validatorBalance = this.config.validators_balance;
-    await this.executeInAllValidators(
-      (n: number) =>
-        `${this.config.binary} add-genesis-account val${n + 1} ${
-          Array.isArray(validatorBalance)
-            ? validatorBalance[n]
-            : validatorBalance
-        }${this.config.denom} --home=/opt --keyring-backend=test`,
-    );
+    //add all validators keys and balances
+    for (let i = 0; i < this.config.validators; i++) {
+      await this.executeInAllValidators(
+        () =>
+          `echo "${mnemonic}" | ${this.config.binary} keys add val${
+            i + 1
+          } --home=/opt --recover --account=${i + 1} --keyring-backend=test`,
+      );
+      await this.executeInAllValidators(
+        () =>
+          `${this.config.binary} add-genesis-account val${i + 1} ${
+            Array.isArray(validatorBalance)
+              ? validatorBalance[i]
+              : validatorBalance
+          }${this.config.denom} --home=/opt --keyring-backend=test`,
+      );
+    }
     //add wallets and their balances
     await Promise.all(
       Object.entries(wallets).map(async ([name, wallet]) => {
@@ -96,57 +102,117 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     );
     //collect gentxs
     await this.executeForAllValidatorsContainers(
-      `cp $CONTAINER:/opt/config/gentx .`,
+      `cp $CONTAINER:/opt/config/gentx ${tempDir}/`,
     );
     //collect peer ids
     const peerIds = (
       await this.executeInAllValidators(
         () => `${this.config.binary} tendermint show-node-id --home=/opt`,
       )
-    ).map((v) => `${v.res.out.trim()}@${v.key}`);
+    ).map((v) => `${v.res.out.trim()}@${v.key}:26656`);
 
     //compose genesis
     await dockerCommand(
-      `cp /gentx ${this.containers[`${this.network}_val1`]}:/opt/config/`,
+      `cp ${tempDir}/gentx ${
+        this.containers[`${this.network}_val1`]
+      }:/opt/config/`,
     );
     await this.execInValidator(
       `${this.network}_val1`,
       `${this.config.binary} collect-gentxs --home=/opt`,
     );
+    // retrieve configs
 
     await dockerCommand(
       `cp ${
         this.containers[`${this.network}_val1`]
-      }:/opt/config/genesis.json ./___genesis.json.tmp`,
+      }:/opt/config/genesis.json ${tempDir}/___genesis.json.tmp`,
     );
     await dockerCommand(
       `cp ${
         this.containers[`${this.network}_val1`]
-      }:/opt/config/config.toml ./___config.toml.tmp`,
+      }:/opt/config/config.toml ${tempDir}/___config.toml.tmp`,
     );
     await dockerCommand(
       `cp ${
         this.containers[`${this.network}_val1`]
-      }:/opt/config/app.toml ./___app.toml.tmp`,
+      }:/opt/config/app.toml ${tempDir}/___app.toml.tmp`,
     );
 
-    // docker cp $container:/opt/config/config.toml $(pwd)/_config.toml
+    //prepare configs
+    if (this.config.genesis_opts) {
+      await this.prepareGenesis(
+        `${tempDir}/___genesis.json.tmp`,
+        this.config.genesis_opts,
+      );
+    }
+    await this.prepareTOML(`${tempDir}/___config.toml.tmp`, {
+      'p2p.persistent_peers': peerIds.join(','),
+      'rpc.laddr': 'tcp://0.0.0.0:26657',
+      ...(this.config.config_opts || {}),
+    });
 
-    console.log({ peerIds });
-    console.log('!!');
-    console.log(wallets, mnemonic);
+    if (this.config.app_opts) {
+      await this.prepareTOML(
+        `${tempDir}/___app.toml.tmp`,
+        this.config.app_opts,
+      );
+    }
+    //copy configs
+
+    await this.executeForAllValidatorsContainers(
+      `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
+    );
+    await this.executeForAllValidatorsContainers(
+      `cp ${tempDir}/___app.toml.tmp $CONTAINER:/opt/config/app.toml`,
+    );
+    await this.executeForAllValidatorsContainers(
+      `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
+    );
+
+    //stop all containers
+    await this.executeForAllValidatorsContainers('stop -t 0 $CONTAINER');
   }
 
-  async executeForAllValidatorsContainers(command: string): Promise<any[]> {
+  private async executeForAllValidatorsContainers(
+    command: string,
+  ): Promise<any[]> {
     return Object.values(this.containers).map((container) =>
-      dockerCommand(command.replace('$CONTAINER', container)),
+      dockerCommand(command.replace('$CONTAINER', container), {
+        echo: this.debug,
+      }),
     );
+  }
+
+  private async prepareTOML(
+    file: string,
+    redefineOpts: Record<string, any>,
+  ): Promise<void> {
+    let data = toml.parse(await fs.readFile(file, 'utf-8'));
+    for (const [key, value] of Object.entries(redefineOpts)) {
+      data = _.set(data, key, value);
+    }
+    await fs.writeFile(file, toml.stringify(data));
+  }
+
+  private async prepareGenesis(
+    file: string,
+    redefineOpts: Record<string, any>,
+  ): Promise<void> {
+    let data = JSON.parse(await fs.readFile(file, 'utf-8'));
+    for (const [key, value] of Object.entries(redefineOpts)) {
+      data = _.set(data, key, value);
+    }
+    await fs.writeFile(file, JSON.stringify(data, null, 2));
   }
 
   async stop(): Promise<void> {
     for (let i = 0; i < this.config.validators; i++) {
       const name = `${this.network}_val${i + 1}`;
-      await dockerCompose.stopOne(name, { cwd: process.cwd(), log: true });
+      await dockerCompose.stopOne(name, {
+        cwd: process.cwd(),
+        log: this.debug,
+      });
     }
   }
 
@@ -199,7 +265,6 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     mnemonic: string,
   ): Promise<CosmoparkDefaultChain> {
     const c = new CosmoparkDefaultChain(name, config);
-    c.debug = true;
     await c.start(wallets, mnemonic);
     return c;
   }
