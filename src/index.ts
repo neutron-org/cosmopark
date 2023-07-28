@@ -23,11 +23,10 @@ const config: CosmoparkConfig = {
         'app_state.slashing.params.signed_blocks_window': '10',
       },
       config_opts: {
-        'rpc.laddr': 'tcp://127.0.0.1:26657',
+        'rpc.laddr': 'tcp://0.0.0.0:26657',
       },
       app_opts: {
-        //app.toml
-        'rpc.laddr': 'tcp://127.0.0.1:26657',
+        // 'rpc.laddr': 'tcp://0.0.0.0:26657',
       },
     },
     // neutron: {

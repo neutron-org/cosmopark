@@ -25,14 +25,14 @@ export class Cosmopark {
         );
       }
     }
-    // await dockerCompose.upAll({ cwd: process.cwd(), log: true });
+    await dockerCompose.upAll({ cwd: process.cwd(), log: true });
     return instance;
   }
 
   async generateDockerCompose(): Promise<void> {
     const services = {};
     const volumes = {};
-
+    let networkCounter = 0;
     for (const [key, network] of Object.entries(this.config.networks)) {
       const validators = [];
       for (let i = 0; i < network.validators; i++) {
@@ -42,9 +42,13 @@ export class Cosmopark {
           image: network.image,
           command: ['start', `--home=/opt`],
           volumes: [`${name}:/opt`],
+          ...(i === 0 && {
+            ports: [`127.0.0.1:${networkCounter + 26657}:26657`],
+          }),
         };
         volumes[name] = null;
       }
+      networkCounter++;
     }
 
     const dockerCompose = {

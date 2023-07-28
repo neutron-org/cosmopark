@@ -33,6 +33,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   ): Promise<void> {
     const tempDir = os.tmpdir() + '/cosmopark';
     await rimraf(tempDir);
+    await fs.mkdir(tempDir, { recursive: true });
     await dockerCompose.down({
       cwd: process.cwd(),
       log: this.debug,
