@@ -18,6 +18,8 @@ export type CosmoparkNetworkConfig = {
   app_opts?: {
     [key: string]: any;
   };
+  upload?: string[];
+  post_init?: string[];
 };
 
 export type CosmoparkRelayer = {

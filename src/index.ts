@@ -4,37 +4,54 @@ import { Cosmopark } from './cosmopark';
 
 const config: CosmoparkConfig = {
   networks: {
-    lsm: {
-      image: 'lsm',
-      validators: 2,
-      chain_id: 'testlsm',
-      denom: 'stake',
-      binary: 'liquidstakingd',
-      prefix: 'cosmos',
-      validators_balance: [
-        '1000000000',
-        '1000000000',
-        '1000000000',
-        '1000000000',
-      ], // or 1000000000
-      genesis_opts: {
-        'app_state.staking.params.validator_bond_factor': '10',
-        'app_state.slashing.params.downtime_jail_duration': '10s',
-        'app_state.slashing.params.signed_blocks_window': '10',
-      },
+    // lsm: {
+    //   image: 'lsm',
+    //   validators: 4,
+    //   chain_id: 'testlsm',
+    //   denom: 'stake',
+    //   binary: 'liquidstakingd',
+    //   prefix: 'cosmos',
+    //   validators_balance: '1000000000',
+    //   // [
+    //   //   '1000000000',
+    //   //   '1000000000',
+    //   //   '1000000000',
+    //   //   '1000000000',
+    //   // ], // or 1000000000
+    //   genesis_opts: {
+    //     'app_state.staking.params.validator_bond_factor': '10',
+    //     'app_state.slashing.params.downtime_jail_duration': '10s',
+    //     'app_state.slashing.params.signed_blocks_window': '10',
+    //   },
+    //   config_opts: {
+    //     'rpc.laddr': 'tcp://0.0.0.0:26657',
+    //   },
+    //   app_opts: {
+    //     // 'rpc.laddr': 'tcp://0.0.0.0:26657',
+    //   },
+    // },
+    neutron: {
+      image: 'neutron-node',
+      binary: 'neutrond',
+      chain_id: 'testneutron',
+      denom: 'untrn',
+      prefix: 'neutron',
+      type: 'ics',
       config_opts: {
-        'rpc.laddr': 'tcp://0.0.0.0:26657',
+        'consensus.timeout_commit': '1s',
+        'consensus.timeout_propose': '1s',
       },
       app_opts: {
-        // 'rpc.laddr': 'tcp://0.0.0.0:26657',
+        'api.enable': 'true',
+        'rosetta.enable': 'true',
+        'grpc.enable': 'true',
+        'api.swagger': 'true',
+        'minimum-gas-prices': '0.0025untrn',
+        'telemetry.prometheus-retention-time': 1000,
       },
+      upload: [],
+      post_init: [],
     },
-    // neutron: {
-    //   image: 'neutron',
-    //   denom: 'neutron',
-    //   prefix: 'neutron',
-    //   type: 'ics', //add ccv section //optional
-    // },
   },
   // relayers: [
   //   {

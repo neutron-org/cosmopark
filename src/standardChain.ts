@@ -17,7 +17,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   network: string;
   config: CosmoparkNetworkConfig;
   relayers: CosmoparkRelayer[] = [];
-  containers: Record<string, string> = {};
+  private containers: Record<string, string> = {};
 
   debug = false;
 
@@ -31,14 +31,9 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     wallets: Record<string, CosmoparkWallet>,
     mnemonic: string,
   ): Promise<void> {
-    const tempDir = os.tmpdir() + '/cosmopark';
+    const tempDir = `${os.tmpdir()}/cosmopark/${this.network}`;
     await rimraf(tempDir);
     await fs.mkdir(tempDir, { recursive: true });
-    await dockerCompose.down({
-      cwd: process.cwd(),
-      log: this.debug,
-      commandOptions: ['-v'],
-    });
     for (let i = 0; i < this.config.validators; i++) {
       const res = await dockerCompose.run(
         `${this.network}_val${i + 1}`,
@@ -61,22 +56,24 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     );
     const validatorBalance = this.config.validators_balance;
     //add all validators keys and balances
-    for (let i = 0; i < this.config.validators; i++) {
-      await this.executeInAllValidators(
-        () =>
-          `echo "${mnemonic}" | ${this.config.binary} keys add val${
-            i + 1
-          } --home=/opt --recover --account=${i + 1} --keyring-backend=test`,
-      );
-      await this.executeInAllValidators(
-        () =>
-          `${this.config.binary} add-genesis-account val${i + 1} ${
-            Array.isArray(validatorBalance)
-              ? validatorBalance[i]
-              : validatorBalance
-          }${this.config.denom} --home=/opt --keyring-backend=test`,
-      );
-    }
+    await Promise.all(
+      new Array(this.config.validators).fill(0).map(async (_, i) => {
+        await this.executeInAllValidators(
+          () =>
+            `echo "${mnemonic}" | ${this.config.binary} keys add val${
+              i + 1
+            } --home=/opt --recover --account=${i + 1} --keyring-backend=test`,
+        );
+        await this.executeInAllValidators(
+          () =>
+            `${this.config.binary} add-genesis-account val${i + 1} ${
+              Array.isArray(validatorBalance)
+                ? validatorBalance[i]
+                : validatorBalance
+            }${this.config.denom} --home=/opt --keyring-backend=test`,
+        );
+      }),
+    );
     //add wallets and their balances
     await Promise.all(
       Object.entries(wallets).map(async ([name, wallet]) => {
@@ -124,21 +121,23 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     );
     // retrieve configs
 
-    await dockerCommand(
-      `cp ${
-        this.containers[`${this.network}_val1`]
-      }:/opt/config/genesis.json ${tempDir}/___genesis.json.tmp`,
-    );
-    await dockerCommand(
-      `cp ${
-        this.containers[`${this.network}_val1`]
-      }:/opt/config/config.toml ${tempDir}/___config.toml.tmp`,
-    );
-    await dockerCommand(
-      `cp ${
-        this.containers[`${this.network}_val1`]
-      }:/opt/config/app.toml ${tempDir}/___app.toml.tmp`,
-    );
+    await Promise.all([
+      dockerCommand(
+        `cp ${
+          this.containers[`${this.network}_val1`]
+        }:/opt/config/genesis.json ${tempDir}/___genesis.json.tmp`,
+      ),
+      dockerCommand(
+        `cp ${
+          this.containers[`${this.network}_val1`]
+        }:/opt/config/config.toml ${tempDir}/___config.toml.tmp`,
+      ),
+      dockerCommand(
+        `cp ${
+          this.containers[`${this.network}_val1`]
+        }:/opt/config/app.toml ${tempDir}/___app.toml.tmp`,
+      ),
+    ]);
 
     //prepare configs
     if (this.config.genesis_opts) {
@@ -150,6 +149,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     await this.prepareTOML(`${tempDir}/___config.toml.tmp`, {
       'p2p.persistent_peers': peerIds.join(','),
       'rpc.laddr': 'tcp://0.0.0.0:26657',
+      'api.address': 'tcp://0.0.0.0:1317',
       ...(this.config.config_opts || {}),
     });
 
@@ -160,16 +160,17 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       );
     }
     //copy configs
-
-    await this.executeForAllValidatorsContainers(
-      `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
-    );
-    await this.executeForAllValidatorsContainers(
-      `cp ${tempDir}/___app.toml.tmp $CONTAINER:/opt/config/app.toml`,
-    );
-    await this.executeForAllValidatorsContainers(
-      `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
-    );
+    await Promise.all([
+      this.executeForAllValidatorsContainers(
+        `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
+      ),
+      this.executeForAllValidatorsContainers(
+        `cp ${tempDir}/___app.toml.tmp $CONTAINER:/opt/config/app.toml`,
+      ),
+      this.executeForAllValidatorsContainers(
+        `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
+      ),
+    ]);
 
     //stop all containers
     await this.executeForAllValidatorsContainers('stop -t 0 $CONTAINER');
