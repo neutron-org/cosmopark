@@ -49,8 +49,8 @@ const config: CosmoparkConfig = {
         'minimum-gas-prices': '0.0025untrn',
         'telemetry.prometheus-retention-time': 1000,
       },
-      upload: [],
-      post_init: [],
+      upload: ['./contracts', './some.sh'],
+      post_init: ['bash /opt/some.sh'],
     },
   },
   // relayers: [

@@ -105,6 +105,22 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     await this.execInNode(
       `${this.config.binary} add-consumer-section --home=/opt`,
     );
+
+    //upload files
+    if (this.config.upload) {
+      await Promise.all(
+        this.config.upload.map(async (path) => {
+          await this.executeForContainer(`cp ${path} $CONTAINER:/opt/`);
+        }),
+      );
+    }
+    //exec post init commands
+    if (this.config.post_init) {
+      for (const command of this.config.post_init) {
+        await this.execInNode(command);
+      }
+    }
+
     //stop all containers
     await this.executeForContainer(`stop -t 0 $CONTAINER`);
   }
@@ -179,6 +195,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     },
   ): Promise<CosmoparkIcsChain> {
     const c = new CosmoparkIcsChain(name, config);
+    c.debug = true;
     await c.start(wallets);
     return c;
   }
