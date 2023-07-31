@@ -26,6 +26,8 @@ export type CosmoparkRelayer = {
   type: CosmoparkRelayerTypes;
   networks: string[];
   config?: any;
+  mnemonic: string;
+  balance?: string;
 };
 
 export type CosmoparkRelayerTypes = 'hermes' | 'default';

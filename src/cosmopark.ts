@@ -1,9 +1,9 @@
-import { CosmoparkChain, CosmoparkConfig } from './types';
+import { CosmoparkChain, CosmoparkConfig, CosmoparkWallet } from './types';
 import YAML from 'yaml';
 import { promises as fs } from 'fs';
-import { CosmoparkDefaultChain } from './standardChain';
+import { CosmoparkDefaultChain } from './chains/standardChain';
 import dockerCompose from 'docker-compose';
-import { CosmoparkIcsChain } from './icsChain';
+import { CosmoparkIcsChain } from './chains/icsChain';
 
 export class Cosmopark {
   config: CosmoparkConfig;
@@ -21,20 +21,27 @@ export class Cosmopark {
       log: false,
       commandOptions: ['-v'],
     });
+    const relayerWallets: Record<string, CosmoparkWallet> =
+      config.relayers
+        ?.map((relayer) => ({
+          mnemonic: relayer.mnemonic,
+          balance: relayer.balance,
+        }))
+        .reduce((a, c, idx) => ({ ...a, [`relayer-${idx}`]: c }), {}) || {};
     for (const [key, network] of Object.entries(config.networks)) {
       switch (network.type) {
         case 'ics':
           instance.networks[key] = await CosmoparkIcsChain.create(
             key,
             network,
-            config.wallets,
+            { ...config.wallets, ...relayerWallets },
           );
           break;
         default:
           instance.networks[key] = await CosmoparkDefaultChain.create(
             key,
             network,
-            config.wallets,
+            { ...config.wallets, ...relayerWallets },
             config.master_mnemonic,
           );
           break;
@@ -132,6 +139,9 @@ export class Cosmopark {
             `Relayer is linked to the network:${network} is not defined`,
           );
         }
+      }
+      if (relayer.balance && !relayer.balance.match(/^[0-9]+$/)) {
+        throw new Error(`Relayer balance is wrong`);
       }
     }
   };

@@ -3,7 +3,7 @@ import {
   CosmoparkNetworkConfig,
   CosmoparkRelayer,
   CosmoparkWallet,
-} from './types';
+} from '../types';
 import dockerCompose, { IDockerComposeResult } from 'docker-compose';
 import { dockerCommand } from 'docker-cli-js';
 import { rimraf } from 'rimraf';
