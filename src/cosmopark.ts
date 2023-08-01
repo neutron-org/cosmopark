@@ -8,6 +8,7 @@ import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { dockerCommand } from 'docker-cli-js';
 
 export class Cosmopark {
+  private debug = false;
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
   relayers: any[] = []; //TODO: add relayers type
@@ -17,28 +18,35 @@ export class Cosmopark {
 
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
     const instance = new Cosmopark(config);
-    instance.validateConfig(config);
-    try {
-      await dockerCompose.down({
-        cwd: process.cwd(),
-        log: false,
-        commandOptions: ['-v', '--remove-orphans'],
-      });
-    } catch (e) {
-      const res = await dockerCompose.ps({ commandOptions: ['-a'] });
-      if (res.exitCode === 0) {
-        const containers = res.out
-          .split('\n')
-          .filter((v) => v.match(/cosmopark_/))
-          .map((v) => v.split(' ')[0]);
-        await dockerCommand(`stop -t0 ${containers.join(' ')}`);
+    if (
+      await fs
+        .stat('docker-compose.yml')
+        .then(() => true)
+        .catch(() => false)
+    ) {
+      instance.validateConfig(config);
+      try {
         await dockerCompose.down({
           cwd: process.cwd(),
           log: false,
           commandOptions: ['-v', '--remove-orphans'],
         });
-      } else {
-        throw e;
+      } catch (e) {
+        const res = await dockerCompose.ps({ commandOptions: ['-a'] });
+        if (res.exitCode === 0) {
+          const containers = res.out
+            .split('\n')
+            .filter((v) => v.match(/cosmopark_/))
+            .map((v) => v.split(' ')[0]);
+          await dockerCommand(`stop -t0 ${containers.join(' ')}`);
+          await dockerCompose.down({
+            cwd: process.cwd(),
+            log: false,
+            commandOptions: ['-v', '--remove-orphans'],
+          });
+        } else {
+          throw e;
+        }
       }
     }
     await instance.generateDockerCompose();
@@ -48,7 +56,7 @@ export class Cosmopark {
           mnemonic: relayer.mnemonic,
           balance: relayer.balance,
         }))
-        .reduce((a, c, idx) => ({ ...a, [`relayer-${idx}`]: c }), {}) || {};
+        .reduce((a, c, idx) => ({ ...a, [`relayer_${idx}`]: c }), {}) || {};
     for (const [key, network] of Object.entries(config.networks)) {
       switch (network.type) {
         case 'ics':
@@ -79,11 +87,14 @@ export class Cosmopark {
             ),
           );
           break;
+        case 'neutron':
+          // nothing to do here
+          break;
         default:
           throw new Error(`Relayer type ${relayer.type} is not supported`);
       }
     }
-    await dockerCompose.upAll({ cwd: process.cwd(), log: true });
+    await dockerCompose.upAll({ cwd: process.cwd(), log: instance.debug });
     return instance;
   }
 
@@ -119,7 +130,11 @@ export class Cosmopark {
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
               ...(i === 0 && {
-                ports: [`127.0.0.1:${networkCounter + 26657}:26657`],
+                ports: [
+                  `127.0.0.1:${networkCounter + 26657}:26657`,
+                  `127.0.0.1:${networkCounter + 1317}:1317`,
+                  `127.0.0.1:${networkCounter + 9090}:9090`,
+                ],
               }),
             };
             volumes[name] = null;
@@ -127,22 +142,91 @@ export class Cosmopark {
       }
       networkCounter++;
     }
-
+    const prevConnections = [];
     for (const [index, relayer] of Object.entries(this.config.relayers || [])) {
       const name = `relayer_${relayer.type}${index}`;
-      services[name] = {
-        image: relayer.image,
-        command: ['-c', `/root/start.sh`],
-        volumes: [`${name}:/root`],
-        entrypoint: ['/bin/bash'],
-        depends_on: relayer.networks.map(
-          (network) =>
-            `${network}${
-              this.config.networks[network].type === 'ics' ? '_ics' : '_val1'
-            }`,
-        ),
-      };
-      volumes[name] = null;
+      switch (relayer.type) {
+        case 'hermes':
+          services[name] = {
+            image: relayer.image,
+            command: ['-c', `/root/start.sh`],
+            volumes: [`${name}:/root`],
+            entrypoint: ['/bin/bash'],
+            depends_on: relayer.networks.map(
+              (network) =>
+                `${network}${
+                  this.config.networks[network].type === 'ics'
+                    ? '_ics'
+                    : '_val1'
+                }`,
+            ),
+          };
+          volumes[name] = null;
+          prevConnections.push(...(relayer.connections || []));
+          break;
+        case 'neutron': {
+          let id = 0;
+          const icsNetwork = relayer.networks.find(
+            (network) => this.config.networks[network].type === 'ics',
+          );
+          const otherNetwork = relayer.networks.find(
+            (network) => this.config.networks[network].type !== 'ics',
+          );
+          for (const [network1, network2] of prevConnections) {
+            if (
+              (network1 === icsNetwork && network2 === otherNetwork) ||
+              (network2 === icsNetwork && network1 === otherNetwork)
+            ) {
+              break;
+            }
+            if (network1 === icsNetwork || network2 === icsNetwork) {
+              id++;
+            }
+          }
+          if (!icsNetwork || !otherNetwork) {
+            throw new Error(
+              `Relayer:${relayer.type} should be linked to 2 networks (1 ics and 1 default)`,
+            );
+          }
+          services[name] = {
+            image: relayer.image,
+            entrypoint: ['./run.sh'],
+            depends_on: relayer.networks.map(
+              (network) =>
+                `${network}${
+                  this.config.networks[network].type === 'ics'
+                    ? '_ics'
+                    : '_val1'
+                }`,
+            ),
+            volumes: [`${icsNetwork}_ics:/data`],
+            environment: [
+              `NODE=${icsNetwork}_ics`,
+              `LOGGER_LEVEL=${relayer.log_level}`,
+              `RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX=${this.config.networks[icsNetwork].prefix}`,
+              `RELAYER_NEUTRON_CHAIN_RPC_ADDR=tcp://${icsNetwork}_ics:26657`,
+              `RELAYER_NEUTRON_CHAIN_REST_ADDR=http://${icsNetwork}_ics:1317`,
+              `RELAYER_NEUTRON_CHAIN_HOME_DIR=/data`,
+              `RELAYER_NEUTRON_CHAIN_SIGN_KEY_NAME=relayer_${index}`,
+              `RELAYER_NEUTRON_CHAIN_GAS_PRICES=0.5${this.config.networks[icsNetwork].denom}`,
+              `RELAYER_NEUTRON_CHAIN_GAS_ADJUSTMENT=1.5`,
+              `RELAYER_NEUTRON_CHAIN_CONNECTION_ID=connection-${id}`,
+              `RELAYER_NEUTRON_CHAIN_DEBUG=true`,
+              `RELAYER_NEUTRON_CHAIN_ACCOUNT_PREFIX=${this.config.networks[icsNetwork].prefix}`,
+              `RELAYER_NEUTRON_CHAIN_KEYRING_BACKEND=test`,
+              `RELAYER_TARGET_CHAIN_RPC_ADDR=tcp://${otherNetwork}_val1:26657`,
+              `RELAYER_TARGET_CHAIN_ACCOUNT_PREFIX=${this.config.networks[otherNetwork].prefix}`,
+              `RELAYER_TARGET_CHAIN_VALIDATOR_ACCOUNT_PREFIX=${this.config.networks[otherNetwork].prefix}valoper`,
+              `RELAYER_TARGET_CHAIN_DEBUG=true`,
+              `RELAYER_REGISTRY_ADDRESSES=`,
+              `RELAYER_ALLOW_TX_QUERIES=true`,
+              `RELAYER_ALLOW_KV_CALLBACKS=true`,
+              `RELAYER_STORAGE_PATH=/data/relayer/storage/leveldb`,
+              `RELAYER_LISTEN_ADDR=0.0.0.0:9999`,
+            ],
+          };
+        }
+      }
     }
 
     const dockerCompose = {
@@ -192,6 +276,18 @@ export class Cosmopark {
           throw new Error(
             `Relayer is linked to the network:${network} is not defined`,
           );
+        }
+      }
+      if (relayer.type === 'neutron') {
+        if (relayer.networks.length !== 2) {
+          throw new Error(
+            `Relayer:${relayer.type} should be linked to 2 networks`,
+          );
+        }
+      }
+      if (relayer.type === 'hermes') {
+        if (!relayer.connections || relayer.connections.length === 0) {
+          throw new Error(`Relayer:${relayer.type} should have connections`);
         }
       }
       if (relayer.balance && !relayer.balance.match(/^[0-9]+$/)) {

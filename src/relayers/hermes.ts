@@ -184,18 +184,11 @@ export class CosmoparkHermesRelayer {
 
   private prepareStarter() {
     let out = `#!/bin/bash\n`;
-    const done = new Set<string>();
-    for (const network1 of this.config.networks) {
-      for (const network2 of this.config.networks) {
-        const key = [network1, network2].sort().join('-');
-        if (network1 !== network2 && !done.has(key)) {
-          done.add(key);
-          out += `while ! echo "y" | ${this.config.binary} create channel --a-chain ${this.networksConfig[network1].chain_id} --b-chain ${this.networksConfig[network2].chain_id} --a-port transfer --b-port transfer --yes --new-client-connection; do
-    sleep 5
+    for (const [network1, network2] of this.config.connections || []) {
+      out += `while ! echo "y" | ${this.config.binary} create channel --a-chain ${this.networksConfig[network1].chain_id} --b-chain ${this.networksConfig[network2].chain_id} --a-port transfer --b-port transfer --yes --new-client-connection; do
+sleep 5
 done
 `;
-        }
-      }
     }
     out += 'hermes start';
     return out;

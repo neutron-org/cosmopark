@@ -113,12 +113,23 @@ const config: CosmoparkConfig = {
     {
       type: 'hermes',
       networks: ['gaia', 'neutron'],
+      connections: [['gaia', 'neutron']],
       log_level: 'info',
       image: 'hermes',
       binary: 'hermes',
       config: {},
       mnemonic:
         'laptop shy priority detect under sorry visit badge crew remind aware plate adapt eager taste',
+      balance: '1000000000',
+    },
+    {
+      type: 'neutron',
+      networks: ['neutron', 'gaia'],
+      image: 'neutron-org/neutron-query-relayer',
+      log_level: 'info',
+      binary: 'neutron-query-relayer',
+      mnemonic:
+        'ignore voyage dinner grit ramp list obvious couple crunch ability fork chef eight normal street fancy cycle hidden smile give tourist joy spin possible',
       balance: '1000000000',
     },
   ],
@@ -150,7 +161,8 @@ const config: CosmoparkConfig = {
 
 // const x = toml.parse(fs.readFileSync('./config.toml', 'utf-8'));
 // console.log(JSON.stringify(x, null, 2));
-// const x = toml.stringify(config);
+const x = toml.stringify(config);
+fs.writeFileSync('./config.toml', x);
 // console.log(toml.parse(x));
 // console.log(
 //   JSON.stringify(

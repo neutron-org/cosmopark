@@ -25,6 +25,7 @@ export type CosmoparkNetworkConfig = {
 export type CosmoparkRelayer = {
   type: CosmoparkRelayerTypes;
   networks: string[];
+  connections?: string[][];
   image: string;
   log_level: string;
   binary: string;
@@ -33,7 +34,7 @@ export type CosmoparkRelayer = {
   balance?: string;
 };
 
-export type CosmoparkRelayerTypes = 'hermes' | 'default';
+export type CosmoparkRelayerTypes = 'hermes' | 'default' | 'neutron';
 
 export type CosmoparkWallet = {
   mnemonic: string;
