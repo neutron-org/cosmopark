@@ -37,11 +37,11 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     for (let i = 0; i < this.config.validators; i++) {
       const res = await dockerCompose.run(
         `${this.network}_val${i + 1}`,
-        'sleep infinity',
+        'infinity',
         {
           log: this.debug,
           cwd: process.cwd(),
-          commandOptions: ['--rm', '--entrypoint', 'sleep infinity', '-d'],
+          commandOptions: ['--rm', '--entrypoint', 'sleep', '-d'],
         },
       );
       if (res.exitCode !== 0) {
@@ -50,7 +50,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       this.containers[`${this.network}_val${i + 1}`] = res.out.trim();
     }
     //generate genesis
-    await this.executeInAllValidators(
+    await this.execInAllValidators(
       (n: number) =>
         `${this.config.binary} init val${this.network}${n} --chain-id=${this.config.chain_id} --home=/opt`,
     );
@@ -58,13 +58,13 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     //add all validators keys and balances
     await Promise.all(
       new Array(this.config.validators).fill(0).map(async (_, i) => {
-        await this.executeInAllValidators(
+        await this.execInAllValidators(
           () =>
             `echo "${mnemonic}" | ${this.config.binary} keys add val${
               i + 1
             } --home=/opt --recover --account=${i + 1} --keyring-backend=test`,
         );
-        await this.executeInAllValidators(
+        await this.execInAllValidators(
           () =>
             `${this.config.binary} add-genesis-account val${i + 1} ${
               Array.isArray(validatorBalance)
@@ -77,18 +77,18 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     //add wallets and their balances
     await Promise.all(
       Object.entries(wallets).map(async ([name, wallet]) => {
-        await this.executeInAllValidators(
+        await this.execInAllValidators(
           () =>
             `echo "${wallet.mnemonic}" | ${this.config.binary} keys add ${name} --home=/opt --recover --keyring-backend=test`,
         );
-        await this.executeInAllValidators(
+        await this.execInAllValidators(
           () =>
             `${this.config.binary} add-genesis-account ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
         );
       }),
     );
     //gentx
-    await this.executeInAllValidators(
+    await this.execInAllValidators(
       (n: number) =>
         `${this.config.binary} gentx val${n + 1} ${
           Array.isArray(validatorBalance)
@@ -99,12 +99,12 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
         }`,
     );
     //collect gentxs
-    await this.executeForAllValidatorsContainers(
+    await this.execForAllValidatorsContainers(
       `cp $CONTAINER:/opt/config/gentx ${tempDir}/`,
     );
     //collect peer ids
     const peerIds = (
-      await this.executeInAllValidators(
+      await this.execInAllValidators(
         () => `${this.config.binary} tendermint show-node-id --home=/opt`,
       )
     ).map((v) => `${v.res.out.trim()}@${v.key}:26656`);
@@ -161,22 +161,22 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     }
     //copy configs
     await Promise.all([
-      this.executeForAllValidatorsContainers(
+      this.execForAllValidatorsContainers(
         `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
       ),
-      this.executeForAllValidatorsContainers(
+      this.execForAllValidatorsContainers(
         `cp ${tempDir}/___app.toml.tmp $CONTAINER:/opt/config/app.toml`,
       ),
-      this.executeForAllValidatorsContainers(
+      this.execForAllValidatorsContainers(
         `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
       ),
     ]);
 
     //stop all containers
-    await this.executeForAllValidatorsContainers('stop -t 0 $CONTAINER');
+    await this.execForAllValidatorsContainers('stop -t 0 $CONTAINER');
   }
 
-  private async executeForAllValidatorsContainers(
+  private async execForAllValidatorsContainers(
     command: string,
   ): Promise<any[]> {
     return Object.values(this.containers).map((container) =>
@@ -228,7 +228,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     }
   }
 
-  async executeInAllValidators(
+  async execInAllValidators(
     command: (n: number) => string,
   ): Promise<{ res: IDockerComposeResult; key: string }[]> {
     const validators = new Array(this.config.validators).fill(0);
@@ -247,9 +247,13 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     validator: string,
     command: string,
   ): Promise<IDockerComposeResult> {
-    return dockerCompose.exec(validator, [`sh`, `-c`, command], {
+    const res = await dockerCompose.exec(validator, [`sh`, `-c`, command], {
       log: this.debug,
     });
+    if (res.exitCode !== 0) {
+      throw new Error(res.err);
+    }
+    return res;
   }
 
   async startValidator(n: number): Promise<void> {

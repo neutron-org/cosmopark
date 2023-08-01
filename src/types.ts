@@ -25,6 +25,9 @@ export type CosmoparkNetworkConfig = {
 export type CosmoparkRelayer = {
   type: CosmoparkRelayerTypes;
   networks: string[];
+  image: string;
+  log_level: string;
+  binary: string;
   config?: any;
   mnemonic: string;
   balance?: string;

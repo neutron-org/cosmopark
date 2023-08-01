@@ -4,10 +4,13 @@ import { promises as fs } from 'fs';
 import { CosmoparkDefaultChain } from './chains/standardChain';
 import dockerCompose from 'docker-compose';
 import { CosmoparkIcsChain } from './chains/icsChain';
+import { CosmoparkHermesRelayer } from './relayers/hermes';
+import { dockerCommand } from 'docker-cli-js';
 
 export class Cosmopark {
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
+  relayers: any[] = []; //TODO: add relayers type
   constructor(config: CosmoparkConfig) {
     this.config = config;
   }
@@ -15,12 +18,30 @@ export class Cosmopark {
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
     const instance = new Cosmopark(config);
     instance.validateConfig(config);
+    try {
+      await dockerCompose.down({
+        cwd: process.cwd(),
+        log: false,
+        commandOptions: ['-v', '--remove-orphans'],
+      });
+    } catch (e) {
+      const res = await dockerCompose.ps({ commandOptions: ['-a'] });
+      if (res.exitCode === 0) {
+        const containers = res.out
+          .split('\n')
+          .filter((v) => v.match(/cosmopark_/))
+          .map((v) => v.split(' ')[0]);
+        await dockerCommand(`stop -t0 ${containers.join(' ')}`);
+        await dockerCompose.down({
+          cwd: process.cwd(),
+          log: false,
+          commandOptions: ['-v', '--remove-orphans'],
+        });
+      } else {
+        throw e;
+      }
+    }
     await instance.generateDockerCompose();
-    await dockerCompose.down({
-      cwd: process.cwd(),
-      log: false,
-      commandOptions: ['-v'],
-    });
     const relayerWallets: Record<string, CosmoparkWallet> =
       config.relayers
         ?.map((relayer) => ({
@@ -47,7 +68,22 @@ export class Cosmopark {
           break;
       }
     }
-    // await dockerCompose.upAll({ cwd: process.cwd(), log: true });
+    for (const [index, relayer] of Object.entries(config.relayers || [])) {
+      switch (relayer.type) {
+        case 'hermes':
+          instance.relayers.push(
+            await CosmoparkHermesRelayer.create(
+              `relayer_${relayer.type}${index}`,
+              relayer,
+              config.networks,
+            ),
+          );
+          break;
+        default:
+          throw new Error(`Relayer type ${relayer.type} is not supported`);
+      }
+    }
+    await dockerCompose.upAll({ cwd: process.cwd(), log: true });
     return instance;
   }
 
@@ -68,6 +104,7 @@ export class Cosmopark {
               ports: [
                 `127.0.0.1:${networkCounter + 26657}:26657`,
                 `127.0.0.1:${networkCounter + 1317}:1317`,
+                `127.0.0.1:${networkCounter + 9090}:9090`,
               ],
             };
             volumes[name] = null;
@@ -89,6 +126,23 @@ export class Cosmopark {
           }
       }
       networkCounter++;
+    }
+
+    for (const [index, relayer] of Object.entries(this.config.relayers || [])) {
+      const name = `relayer_${relayer.type}${index}`;
+      services[name] = {
+        image: relayer.image,
+        command: ['-c', `/root/start.sh`],
+        volumes: [`${name}:/root`],
+        entrypoint: ['/bin/bash'],
+        depends_on: relayer.networks.map(
+          (network) =>
+            `${network}${
+              this.config.networks[network].type === 'ics' ? '_ics' : '_val1'
+            }`,
+        ),
+      };
+      volumes[name] = null;
     }
 
     const dockerCompose = {
