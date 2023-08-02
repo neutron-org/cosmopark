@@ -4,3 +4,4 @@ contracts
 contracts_thirdparty
 dockerfiles
 init-neutrond.sh
+test
