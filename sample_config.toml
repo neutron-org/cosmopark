@@ -3,92 +3,97 @@
 master_mnemonic = "metal stay delay motion actor cave elite lend because cook sunset echo"
 
 # Networks configuration
-[networks.gaia]
-image = "gaia"
-validators = 1
-chain_id = "ggg"
+[networks.lsm]
+binary = "liquidstakingd"
+chain_id = "testlsm"
 denom = "stake"
-binary = "gaiad"
+image = "lsm"
 prefix = "cosmos"
+validators = 1
 # balance can be either a string or a list of strings
 validators_balance = "1000000000"
 
 # redefine default values for genesis.json, config.toml and app.toml
-  [networks.gaia.genesis_opts]
-  "app_state.slashing.params.downtime_jail_duration" = "10s"
-  "app_state.slashing.params.signed_blocks_window" = "10"
+[networks.lsm.genesis_opts]
+"app_state.slashing.params.downtime_jail_duration" = "10s"
+"app_state.slashing.params.signed_blocks_window" = "10"
+"app_state.staking.params.validator_bond_factor" = "10"
 
-  [networks.gaia.config_opts]
-  "rpc.laddr" = "tcp://0.0.0.0:26657"
+[networks.lsm.config_opts]
+"rpc.laddr" = "tcp://0.0.0.0:26657"
 
-  [networks.gaia.app_opts]
-  "api.enable" = true
-  "rosetta.enable" = true
-  "grpc.enable" = true
-  "api.swagger" = true
-  minimum-gas-prices = "0stake"
+[networks.lsm.app_opts]
+"api.enable" = true
+"api.swagger" = true
+"grpc.enable" = true
+minimum-gas-prices = "0stake"
+"rosetta.enable" = true
 
 [networks.neutron]
-image = "neutron-node"
 binary = "neutrond"
 chain_id = "nnn"
 denom = "untrn"
+image = "neutron-node"
 prefix = "neutron"
 type = "ics"
 # upload directories and files to the container
 upload = [
   "./contracts",
   "./contracts_thirdparty",
-  "./init-neutrond.sh"
+  "./init-neutrond.sh",
 ]
 # run commands in the container after the container is set up
-post_init = [ "CHAINID=nnn CHAIN_DIR=/opt /opt/init-neutrond.sh" ]
+post_init = ["CHAINID=nnn CHAIN_DIR=/opt /opt/init-neutrond.sh"]
 
-  [networks.neutron.genesis_opts]
-  "app_state.crisis.constant_fee.denom" = "untrn"
+[networks.neutron.genesis_opts]
+"app_state.crisis.constant_fee.denom" = "untrn"
 
-  [networks.neutron.config_opts]
-  "consensus.timeout_commit" = "1s"
-  "consensus.timeout_propose" = "1s"
+[networks.neutron.config_opts]
+"consensus.timeout_commit" = "1s"
+"consensus.timeout_propose" = "1s"
 
-  [networks.neutron.app_opts]
-  "api.enable" = "true"
-  "rosetta.enable" = "true"
-  "grpc.enable" = "true"
-  "api.swagger" = "true"
-  minimum-gas-prices = "0.0025untrn"
-  "telemetry.prometheus-retention-time" = 1_000
+[networks.neutron.app_opts]
+"api.enable" = "true"
+"api.swagger" = "true"
+"grpc.enable" = "true"
+minimum-gas-prices = "0.0025untrn"
+"rosetta.enable" = "true"
+"telemetry.prometheus-retention-time" = 1_000
 
 # Relayers configuration
 [[relayers]]
-type = "hermes"
-networks = [ "gaia", "neutron" ]
-connections = [ [ "gaia", "neutron" ] ]
-log_level = "info"
-image = "hermes"
+balance = "1000000000"
 binary = "hermes"
-config = { }
+config = {"chains.0.trusting_period" = "14days", "chains.0.unbonding_period" = "504h0m0s"}
+connections = [["lsm", "neutron"]]
+image = "hermes"
+log_level = "trace"
 mnemonic = "laptop shy priority detect under sorry visit badge crew remind aware plate adapt eager taste"
-balance = "1000000000"
+networks = ["lsm", "neutron"]
+type = "hermes"
 
-[[relayers]]
-type = "neutron"
-networks = [ "neutron", "gaia" ]
-image = "neutron-org/neutron-query-relayer"
-log_level = "info"
-binary = "neutron-query-relayer"
-mnemonic = "ignore voyage dinner grit ramp list obvious couple crunch ability fork chef eight normal street fancy cycle hidden smile give tourist joy spin possible"
-balance = "1000000000"
+# [[relayers]]
+# type = "neutron"
+# networks = [ "neutron", "lsm" ]
+# image = "neutron-org/neutron-query-relayer"
+# log_level = "info"
+# binary = "neutron-query-relayer"
+# mnemonic = "ignore voyage dinner grit ramp list obvious couple crunch ability fork chef eight normal street fancy cycle hidden smile give tourist joy spin possible"
+# balance = "1000000000"
 
 # Wallets configuration. These wallets are created in all networks.
 [wallets.demowallet1]
-mnemonic = "solve column paper kit clever electric laundry announce despair sister bring find bachelor enact two another tissue actor day punch orbit orbit math cave"
 balance = "1000000000"
+mnemonic = "solve column paper kit clever electric laundry announce despair sister bring find bachelor enact two another tissue actor day punch orbit orbit math cave"
 
 [wallets.demo1]
-mnemonic = "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass"
 balance = "1000000000"
+mnemonic = "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass"
 
 [wallets.demo2]
-mnemonic = "veteran try aware erosion drink dance decade comic dawn museum release episode original list ability owner size tuition surface ceiling depth seminar capable only"
 balance = "1000000000"
+mnemonic = "veteran try aware erosion drink dance decade comic dawn museum release episode original list ability owner size tuition surface ceiling depth seminar capable only"
+
+[wallets.demo3]
+balance = "1000000000"
+mnemonic = "metal stay delay motion actor cave elite lend because cook sunset echo"

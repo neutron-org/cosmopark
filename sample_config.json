@@ -1,0 +1,102 @@
+{
+  "master_mnemonic": "metal stay delay motion actor cave elite lend because cook sunset echo",
+  "networks": {
+    "lsm": {
+      "binary": "liquidstakingd",
+      "chain_id": "testlsm",
+      "denom": "stake",
+      "image": "lsm",
+      "prefix": "cosmos",
+      "validators": 1,
+      "validators_balance": "1000000000",
+      "genesis_opts": {
+        "app_state.slashing.params.downtime_jail_duration": "10s",
+        "app_state.slashing.params.signed_blocks_window": "10",
+        "app_state.staking.params.validator_bond_factor": "10"
+      },
+      "config_opts": {
+        "rpc.laddr": "tcp://0.0.0.0:26657"
+      },
+      "app_opts": {
+        "api.enable": true,
+        "api.swagger": true,
+        "grpc.enable": true,
+        "minimum-gas-prices": "0stake",
+        "rosetta.enable": true
+      }
+    },
+    "neutron": {
+      "binary": "neutrond",
+      "chain_id": "nnn",
+      "denom": "untrn",
+      "image": "neutron-node",
+      "prefix": "neutron",
+      "type": "ics",
+      "upload": [
+        "./contracts",
+        "./contracts_thirdparty",
+        "./init-neutrond.sh"
+      ],
+      "post_init": [
+        "CHAINID=nnn CHAIN_DIR=/opt /opt/init-neutrond.sh"
+      ],
+      "genesis_opts": {
+        "app_state.crisis.constant_fee.denom": "untrn"
+      },
+      "config_opts": {
+        "consensus.timeout_commit": "1s",
+        "consensus.timeout_propose": "1s"
+      },
+      "app_opts": {
+        "api.enable": "true",
+        "api.swagger": "true",
+        "grpc.enable": "true",
+        "minimum-gas-prices": "0.0025untrn",
+        "rosetta.enable": "true",
+        "telemetry.prometheus-retention-time": 1000
+      }
+    }
+  },
+  "relayers": [
+    {
+      "balance": "1000000000",
+      "binary": "hermes",
+      "config": {
+        "chains.0.trusting_period": "14days",
+        "chains.0.unbonding_period": "504h0m0s"
+      },
+      "connections": [
+        [
+          "lsm",
+          "neutron"
+        ]
+      ],
+      "image": "hermes",
+      "log_level": "trace",
+      "mnemonic": "laptop shy priority detect under sorry visit badge crew remind aware plate adapt eager taste",
+      "networks": [
+        "lsm",
+        "neutron"
+      ],
+      "type": "hermes"
+    }
+  ],
+  "wallets": {
+    "demowallet1": {
+      "balance": "1000000000",
+      "mnemonic": "solve column paper kit clever electric laundry announce despair sister bring find bachelor enact two another tissue actor day punch orbit orbit math cave"
+    },
+    "demo1": {
+      "balance": "1000000000",
+      "mnemonic": "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass"
+    },
+    "demo2": {
+      "balance": "1000000000",
+      "mnemonic": "veteran try aware erosion drink dance decade comic dawn museum release episode original list ability owner size tuition surface ceiling depth seminar capable only"
+    },
+    "demo3": {
+      "balance": "1000000000",
+      "mnemonic": "metal stay delay motion actor cave elite lend because cook sunset echo"
+    }
+  }
+}

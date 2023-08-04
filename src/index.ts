@@ -20,7 +20,11 @@ program
       console.log('Unknown file format');
     }
     console.log('🚀 Starting');
-    await Cosmopark.create(config);
+    try {
+      await Cosmopark.create(config);
+    } catch (e) {
+      console.log('ERROR', e);
+    }
     console.log('🥳 Done');
   });
 
