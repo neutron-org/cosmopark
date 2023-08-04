@@ -1,5 +1,5 @@
 {
-  "name": "cosmopark",
+  "name": "@neutron-org/cosmopark",
   "version": "1.0.0",
   "description": "Start and interact with your cosmos park",
   "main": "index.js",
