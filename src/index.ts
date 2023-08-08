@@ -34,3 +34,4 @@ if (require.main === module) {
 }
 
 export default Cosmopark;
+export { CosmoparkConfig };
