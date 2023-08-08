@@ -33,4 +33,4 @@ if (require.main === module) {
   program.parse();
 }
 
-export { Cosmopark };
+export default Cosmopark;
