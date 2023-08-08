@@ -13,6 +13,7 @@ import _ from 'lodash';
 import os from 'os';
 
 export class CosmoparkDefaultChain implements CosmoparkChain {
+  filename: string;
   type: string;
   network: string;
   config: CosmoparkNetworkConfig;
@@ -21,10 +22,11 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
 
   debug = false;
 
-  constructor(name: string, config: CosmoparkNetworkConfig) {
+  constructor(name: string, config: CosmoparkNetworkConfig, filename: string) {
     this.type = config.type;
     this.config = config;
     this.network = name;
+    this.filename = filename;
   }
 
   async start(
@@ -39,6 +41,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
         `${this.network}_val${i + 1}`,
         'infinity',
         {
+          config: this.filename,
           log: this.debug,
           cwd: process.cwd(),
           commandOptions: ['--rm', '--entrypoint', 'sleep', '-d'],
@@ -212,6 +215,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     for (let i = 0; i < this.config.validators; i++) {
       const name = `${this.network}_val${i + 1}`;
       await dockerCompose.stopOne(name, {
+        config: this.filename,
         cwd: process.cwd(),
         log: this.debug,
       });
@@ -222,6 +226,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     for (let i = 0; i < this.config.validators; i++) {
       const name = `${this.network}_val${i + 1}`;
       await dockerCompose.restartOne(name, {
+        config: this.filename,
         cwd: process.cwd(),
         log: true,
       });
@@ -249,6 +254,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   ): Promise<IDockerComposeResult> {
     const res = await dockerCompose.exec(validator, [`sh`, `-c`, command], {
       log: this.debug,
+      config: this.filename,
     });
     if (res.exitCode !== 0) {
       throw new Error(res.err);
@@ -269,8 +275,9 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       [key: string]: CosmoparkWallet;
     },
     mnemonic: string,
+    filename: string,
   ): Promise<CosmoparkDefaultChain> {
-    const c = new CosmoparkDefaultChain(name, config);
+    const c = new CosmoparkDefaultChain(name, config, filename);
     await c.start(wallets, mnemonic);
     return c;
   }

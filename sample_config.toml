@@ -1,6 +1,10 @@
 # Main mnemonic which is used to generate all other mnemonics
 # Every validator derives its own mnemonic from this one, account number incremented by 1 for each validator.
 master_mnemonic = "metal stay delay motion actor cave elite lend because cook sunset echo"
+# Context is used to generate different docker-compose-{context}.yml files
+context = "some"
+# if you already run instance of cosmopark you can shift the port offset
+portOffset = 0
 
 # Networks configuration
 [networks.lsm]

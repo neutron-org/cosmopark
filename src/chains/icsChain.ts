@@ -17,14 +17,16 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   network: string;
   config: CosmoparkNetworkConfig;
   relayers: CosmoparkRelayer[] = [];
+  filename: string;
   private container: string;
 
   debug = false;
 
-  constructor(name: string, config: CosmoparkNetworkConfig) {
+  constructor(name: string, config: CosmoparkNetworkConfig, filename: string) {
     this.type = config.type;
     this.config = config;
     this.network = name;
+    this.filename = filename;
   }
 
   async start(wallets: Record<string, CosmoparkWallet>): Promise<void> {
@@ -33,6 +35,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     await fs.mkdir(tempDir, { recursive: true });
 
     const res = await dockerCompose.run(`${this.network}_ics`, 'infinity', {
+      config: this.filename,
       log: this.debug,
       cwd: process.cwd(),
       commandOptions: ['--rm', '--entrypoint=sleep', '-d'],
@@ -166,6 +169,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     for (let i = 0; i < this.config.validators; i++) {
       const name = `${this.network}_val${i + 1}`;
       await dockerCompose.stopOne(name, {
+        config: this.filename,
         cwd: process.cwd(),
         log: this.debug,
       });
@@ -176,6 +180,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     for (let i = 0; i < this.config.validators; i++) {
       const name = `${this.network}_val${i + 1}`;
       await dockerCompose.restartOne(name, {
+        config: this.filename,
         cwd: process.cwd(),
         log: true,
       });
@@ -193,6 +198,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
       [`sh`, `-c`, command],
       {
         log: this.debug,
+        config: this.filename,
       },
     );
     if (res.exitCode !== 0) {
@@ -215,8 +221,9 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     wallets: {
       [key: string]: CosmoparkWallet;
     },
+    filename: string,
   ): Promise<CosmoparkIcsChain> {
-    const c = new CosmoparkIcsChain(name, config);
+    const c = new CosmoparkIcsChain(name, config, filename);
     await c.start(wallets);
     return c;
   }

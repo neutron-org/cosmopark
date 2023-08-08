@@ -46,6 +46,8 @@ export type CosmoparkConfig = {
     [key: string]: CosmoparkNetworkConfig;
   };
   relayers?: CosmoparkRelayer[];
+  context?: string;
+  portOffset?: number;
   master_mnemonic: string;
   wallets?: {
     [key: string]: CosmoparkWallet;
@@ -53,6 +55,7 @@ export type CosmoparkConfig = {
 };
 
 export interface CosmoparkChain {
+  filename: string;
   type: string;
   network: string;
   config: CosmoparkNetworkConfig;

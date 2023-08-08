@@ -109,6 +109,7 @@ const baseConfig = {
   chains: [],
 };
 export class CosmoparkHermesRelayer {
+  filename: string;
   private name: string;
   private container: string;
   private config: CosmoparkRelayer;
@@ -119,10 +120,12 @@ export class CosmoparkHermesRelayer {
     name: string,
     config: CosmoparkRelayer,
     networksConfig: Record<string, CosmoparkNetworkConfig>,
+    filename: string,
   ) {
     this.name = name;
     this.config = config;
     this.networksConfig = networksConfig;
+    this.filename = filename;
   }
 
   async start(): Promise<void> {
@@ -130,6 +133,7 @@ export class CosmoparkHermesRelayer {
     await rimraf(tempPath);
     await fs.mkdir(tempPath, { recursive: true });
     const res = await dockerCompose.run(this.name, 'infinity', {
+      config: this.filename,
       log: this.debug,
       cwd: process.cwd(),
       commandOptions: ['--rm', '--entrypoint=sleep', '-d'],
@@ -209,6 +213,7 @@ done
 
   async execInNode(command: string): Promise<IDockerComposeResult> {
     return dockerCompose.exec(this.name, [`sh`, `-c`, command], {
+      config: this.filename,
       log: this.debug,
     });
   }
@@ -217,8 +222,14 @@ done
     name: string,
     config: CosmoparkRelayer,
     networksConfig: Record<string, CosmoparkNetworkConfig>,
+    filename: string,
   ): Promise<CosmoparkHermesRelayer> {
-    const instance = new CosmoparkHermesRelayer(name, config, networksConfig);
+    const instance = new CosmoparkHermesRelayer(
+      name,
+      config,
+      networksConfig,
+      filename,
+    );
     await instance.start();
     return instance;
   }

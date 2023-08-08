@@ -9,24 +9,32 @@ import { dockerCommand } from 'docker-cli-js';
 
 export class Cosmopark {
   private debug = false;
+  private context: string;
+  private filename: string;
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
   relayers: any[] = []; //TODO: add relayers type
   constructor(config: CosmoparkConfig) {
     this.config = config;
+    this.context = config.context || 'cosmopark';
+    process.env.COMPOSE_PROJECT_NAME = this.context;
+    this.filename = config.context
+      ? `docker-compose-${config.context}.yml`
+      : 'docker-compose.yml';
   }
 
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
     const instance = new Cosmopark(config);
     if (
       await fs
-        .stat('docker-compose.yml')
+        .stat(instance.filename)
         .then(() => true)
         .catch(() => false)
     ) {
       instance.validateConfig(config);
       try {
         await dockerCompose.down({
+          config: instance.filename,
           cwd: process.cwd(),
           log: false,
           commandOptions: ['-v', '--remove-orphans'],
@@ -64,6 +72,7 @@ export class Cosmopark {
             key,
             network,
             { ...config.wallets, ...relayerWallets },
+            instance.filename,
           );
           break;
         default:
@@ -72,6 +81,7 @@ export class Cosmopark {
             network,
             { ...config.wallets, ...relayerWallets },
             config.master_mnemonic,
+            instance.filename,
           );
           break;
       }
@@ -84,6 +94,7 @@ export class Cosmopark {
               `relayer_${relayer.type}${index}`,
               relayer,
               config.networks,
+              instance.filename,
             ),
           );
           break;
@@ -94,7 +105,11 @@ export class Cosmopark {
           throw new Error(`Relayer type ${relayer.type} is not supported`);
       }
     }
-    await dockerCompose.upAll({ cwd: process.cwd(), log: instance.debug });
+    await dockerCompose.upAll({
+      config: instance.filename,
+      cwd: process.cwd(),
+      log: instance.debug,
+    });
     return instance;
   }
 
@@ -102,6 +117,7 @@ export class Cosmopark {
     const services = {};
     const volumes = {};
     let networkCounter = 0;
+    const portOffset = this.config.portOffset || 0;
     for (const [key, network] of Object.entries(this.config.networks)) {
       switch (network.type) {
         case 'ics':
@@ -113,9 +129,9 @@ export class Cosmopark {
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
               ports: [
-                `127.0.0.1:${networkCounter + 26657}:26657`,
-                `127.0.0.1:${networkCounter + 1317}:1317`,
-                `127.0.0.1:${networkCounter + 9090}:9090`,
+                `127.0.0.1:${portOffset + networkCounter + 26657}:26657`,
+                `127.0.0.1:${portOffset + networkCounter + 1317}:1317`,
+                `127.0.0.1:${portOffset + networkCounter + 9090}:9090`,
               ],
             };
             volumes[name] = null;
@@ -131,9 +147,9 @@ export class Cosmopark {
               volumes: [`${name}:/opt`],
               ...(i === 0 && {
                 ports: [
-                  `127.0.0.1:${networkCounter + 26657}:26657`,
-                  `127.0.0.1:${networkCounter + 1317}:1317`,
-                  `127.0.0.1:${networkCounter + 9090}:9090`,
+                  `127.0.0.1:${portOffset + networkCounter + 26657}:26657`,
+                  `127.0.0.1:${portOffset + networkCounter + 1317}:1317`,
+                  `127.0.0.1:${portOffset + networkCounter + 9090}:9090`,
                 ],
               }),
             };
@@ -236,7 +252,7 @@ export class Cosmopark {
     };
 
     await fs.writeFile(
-      'docker-compose.yml',
+      this.filename,
       YAML.stringify(dockerCompose, { indent: 2 }),
     );
   }
@@ -244,6 +260,14 @@ export class Cosmopark {
   validateConfig = (config: CosmoparkConfig) => {
     const networks = new Set(Object.keys(config.networks));
     const relayers = config.relayers || [];
+
+    if (config.context && !config.context.match(/^[a-z0-9]+$/)) {
+      throw new Error(`Context should be lowercase alphanumeric`);
+    }
+
+    if (config.portOffset && !Number.isFinite(config.portOffset)) {
+      throw new Error(`Port offset should be number`);
+    }
 
     for (const [key, network] of Object.entries(config.networks)) {
       if (network.type !== 'ics') {

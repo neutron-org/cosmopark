@@ -25,6 +25,7 @@ if (require.main === module) {
         await Cosmopark.create(config);
       } catch (e) {
         console.log('ERROR', e);
+        console.log('ERROR', e.message);
       }
       console.log('🥳 Done');
     });
