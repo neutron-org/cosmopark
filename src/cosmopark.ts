@@ -5,7 +5,7 @@ import {
   CosmoparkWallet,
 } from './types';
 import YAML from 'yaml';
-import { promises as fs } from 'fs';
+import fs from 'fs';
 import { CosmoparkDefaultChain } from './chains/standardChain';
 import dockerCompose from 'docker-compose';
 import { CosmoparkIcsChain } from './chains/icsChain';
@@ -33,23 +33,12 @@ export class Cosmopark {
 
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
     let counter = 0;
-    if (
-      config.multicontext &&
-      (await fs
-        .stat(TMP_FILE)
-        .then(() => true)
-        .catch(() => false))
-    ) {
-      counter = Number(await fs.readFile(TMP_FILE, 'utf-8'));
+    if (config.multicontext && fs.existsSync(TMP_FILE)) {
+      counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
     }
-    await fs.writeFile(TMP_FILE, `${counter + 1}`);
+    fs.writeFileSync(TMP_FILE, `${counter + 1}`);
     const instance = new Cosmopark({ portOffset: counter * 100, ...config });
-    if (
-      await fs
-        .stat(instance.filename)
-        .then(() => true)
-        .catch(() => false)
-    ) {
+    if (fs.existsSync(instance.filename)) {
       instance.validateConfig(config);
       try {
         await dockerCompose.down({
@@ -139,19 +128,13 @@ export class Cosmopark {
       log: this.debug,
       commandOptions: ['-v', '--remove-orphans'],
     });
-    if (
-      this.config.multicontext &&
-      (await fs
-        .stat(TMP_FILE)
-        .then(() => true)
-        .catch(() => false))
-    ) {
-      let counter = Number(await fs.readFile(TMP_FILE, 'utf-8'));
+    if (this.config.multicontext && fs.existsSync(TMP_FILE)) {
+      let counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
       counter--;
       if (counter) {
-        await fs.writeFile(TMP_FILE, `${counter}`);
+        fs.writeFileSync(TMP_FILE, `${counter}`);
       } else {
-        await fs.unlink(TMP_FILE);
+        fs.unlinkSync(TMP_FILE);
       }
     }
   };
@@ -303,7 +286,7 @@ export class Cosmopark {
       volumes,
     };
 
-    await fs.writeFile(
+    fs.writeFileSync(
       this.filename,
       YAML.stringify(dockerCompose, { indent: 2 }),
     );
