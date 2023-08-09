@@ -1,5 +1,12 @@
 export type CosmoparkNetworkTypes = 'ics' | 'default';
 
+export type CosmoparkNetworkPortType = 'rpc' | 'grpc' | 'rest';
+
+export type CosmoparkNetworkPortOutput = Record<
+  CosmoparkNetworkPortType,
+  number
+>;
+
 export type CosmoparkNetworkConfig = {
   image: string;
   denom: string;
@@ -48,6 +55,7 @@ export type CosmoparkConfig = {
   relayers?: CosmoparkRelayer[];
   context?: string;
   portOffset?: number;
+  multicontext?: boolean;
   master_mnemonic: string;
   wallets?: {
     [key: string]: CosmoparkWallet;

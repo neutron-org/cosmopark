@@ -1,4 +1,9 @@
-import { CosmoparkChain, CosmoparkConfig, CosmoparkWallet } from './types';
+import {
+  CosmoparkChain,
+  CosmoparkConfig,
+  CosmoparkNetworkPortOutput,
+  CosmoparkWallet,
+} from './types';
 import YAML from 'yaml';
 import { promises as fs } from 'fs';
 import { CosmoparkDefaultChain } from './chains/standardChain';
@@ -7,10 +12,13 @@ import { CosmoparkIcsChain } from './chains/icsChain';
 import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { dockerCommand } from 'docker-cli-js';
 
+const TMP_FILE = '.__cosmopark';
 export class Cosmopark {
   private debug = false;
   private context: string;
   private filename: string;
+  ports: Record<string, CosmoparkNetworkPortOutput> = {};
+
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
   relayers: any[] = []; //TODO: add relayers type
@@ -24,7 +32,18 @@ export class Cosmopark {
   }
 
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
-    const instance = new Cosmopark(config);
+    let counter = 0;
+    if (
+      config.multicontext &&
+      (await fs
+        .stat(TMP_FILE)
+        .then(() => true)
+        .catch(() => false))
+    ) {
+      counter = Number(await fs.readFile(TMP_FILE, 'utf-8'));
+    }
+    await fs.writeFile(TMP_FILE, `${counter + 1}`);
+    const instance = new Cosmopark({ portOffset: counter * 100, ...config });
     if (
       await fs
         .stat(instance.filename)
@@ -113,12 +132,45 @@ export class Cosmopark {
     return instance;
   }
 
+  stop = async (): Promise<void> => {
+    await dockerCompose.down({
+      config: this.filename,
+      cwd: process.cwd(),
+      log: this.debug,
+      commandOptions: ['-v', '--remove-orphans'],
+    });
+    if (
+      this.config.multicontext &&
+      (await fs
+        .stat(TMP_FILE)
+        .then(() => true)
+        .catch(() => false))
+    ) {
+      let counter = Number(await fs.readFile(TMP_FILE, 'utf-8'));
+      counter--;
+      if (counter) {
+        await fs.writeFile(TMP_FILE, `${counter}`);
+      } else {
+        await fs.unlink(TMP_FILE);
+      }
+    }
+  };
+
   async generateDockerCompose(): Promise<void> {
     const services = {};
     const volumes = {};
     let networkCounter = 0;
     const portOffset = this.config.portOffset || 0;
+
     for (const [key, network] of Object.entries(this.config.networks)) {
+      const rpcPort = portOffset + networkCounter + 26657;
+      const restPort = portOffset + networkCounter + 1317;
+      const grpcPort = portOffset + networkCounter + 9090;
+      this.ports[key] = {
+        rpc: rpcPort,
+        rest: restPort,
+        grpc: grpcPort,
+      };
       switch (network.type) {
         case 'ics':
           {
@@ -129,9 +181,9 @@ export class Cosmopark {
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
               ports: [
-                `127.0.0.1:${portOffset + networkCounter + 26657}:26657`,
-                `127.0.0.1:${portOffset + networkCounter + 1317}:1317`,
-                `127.0.0.1:${portOffset + networkCounter + 9090}:9090`,
+                `127.0.0.1:${rpcPort}:26657`,
+                `127.0.0.1:${restPort}:1317`,
+                `127.0.0.1:${grpcPort}:9090`,
               ],
             };
             volumes[name] = null;
