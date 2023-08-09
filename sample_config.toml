@@ -76,14 +76,14 @@ mnemonic = "laptop shy priority detect under sorry visit badge crew remind aware
 networks = ["lsm", "neutron"]
 type = "hermes"
 
-# [[relayers]]
-# type = "neutron"
-# networks = [ "neutron", "lsm" ]
-# image = "neutron-org/neutron-query-relayer"
-# log_level = "info"
-# binary = "neutron-query-relayer"
-# mnemonic = "ignore voyage dinner grit ramp list obvious couple crunch ability fork chef eight normal street fancy cycle hidden smile give tourist joy spin possible"
-# balance = "1000000000"
+[[relayers]]
+balance = "1000000000"
+binary = "neutron-query-relayer"
+image = "neutron-org/neutron-query-relayer"
+log_level = "info"
+mnemonic = "ignore voyage dinner grit ramp list obvious couple crunch ability fork chef eight normal street fancy cycle hidden smile give tourist joy spin possible"
+networks = ["neutron", "lsm"]
+type = "neutron"
 
 # Wallets configuration. These wallets are created in all networks.
 [wallets.demowallet1]

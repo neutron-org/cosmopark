@@ -33,7 +33,9 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     wallets: Record<string, CosmoparkWallet>,
     mnemonic: string,
   ): Promise<void> {
-    const tempDir = `${os.tmpdir()}/cosmopark/${this.network}`;
+    const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
+      process.env.COMPOSE_PROJECT_NAME
+    }}`;
     await rimraf(tempDir);
     await fs.mkdir(tempDir, { recursive: true });
     for (let i = 0; i < this.config.validators; i++) {

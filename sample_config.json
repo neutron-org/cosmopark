@@ -1,5 +1,7 @@
 {
   "master_mnemonic": "metal stay delay motion actor cave elite lend because cook sunset echo",
+  "context": "some",
+  "portOffset": 0,
   "networks": {
     "lsm": {
       "binary": "liquidstakingd",
@@ -79,6 +81,18 @@
         "neutron"
       ],
       "type": "hermes"
+    },
+    {
+      "balance": "1000000000",
+      "binary": "neutron-query-relayer",
+      "image": "neutron-org/neutron-query-relayer",
+      "log_level": "info",
+      "mnemonic": "ignore voyage dinner grit ramp list obvious couple crunch ability fork chef eight normal street fancy cycle hidden smile give tourist joy spin possible",
+      "networks": [
+        "neutron",
+        "lsm"
+      ],
+      "type": "neutron"
     }
   ],
   "wallets": {

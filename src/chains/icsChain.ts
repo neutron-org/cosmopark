@@ -30,7 +30,9 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   }
 
   async start(wallets: Record<string, CosmoparkWallet>): Promise<void> {
-    const tempDir = `${os.tmpdir()}/cosmopark/${this.network}`;
+    const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
+      process.env.COMPOSE_PROJECT_NAME
+    }`;
     await rimraf(tempDir);
     await fs.mkdir(tempDir, { recursive: true });
 
