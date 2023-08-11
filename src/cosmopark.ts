@@ -126,7 +126,7 @@ export class Cosmopark {
       config: this.filename,
       cwd: process.cwd(),
       log: this.debug,
-      commandOptions: ['-v', '--remove-orphans'],
+      commandOptions: ['-v', '--remove-orphans', '-t0'],
     });
     if (this.config.multicontext && fs.existsSync(TMP_FILE)) {
       let counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
