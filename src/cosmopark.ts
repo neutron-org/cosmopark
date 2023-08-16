@@ -36,7 +36,7 @@ export class Cosmopark {
     if (config.multicontext && fs.existsSync(TMP_FILE)) {
       counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
     }
-    fs.writeFileSync(TMP_FILE, `${counter + 1}`);
+    config.multicontext && fs.writeFileSync(TMP_FILE, `${counter + 1}`);
     const instance = new Cosmopark({ portOffset: counter * 100, ...config });
     if (fs.existsSync(instance.filename)) {
       instance.validateConfig(config);
