@@ -158,14 +158,16 @@ export class Cosmopark {
         case 'ics':
           {
             const name = `${key}_ics`;
+            const logLevel = network.loglevel ? 'debug' : 'info';
             services[name] = {
               image: network.image,
               command: [
                 'start',
                 `--home=/opt`,
-                `--log_level=debug`,
                 `--pruning=nothing`,
                 `--log_format=json`,
+                `--log_level=${logLevel}`,
+                ...(network.trace ? ['--trace'] : []),
               ],
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
@@ -181,6 +183,7 @@ export class Cosmopark {
         default:
           for (let i = 0; i < network.validators; i++) {
             const name = `${key}_val${i + 1}`;
+            const logLevel = network.loglevel ? 'debug' : 'info';
             services[name] = {
               image: network.image,
               command: [
@@ -188,7 +191,8 @@ export class Cosmopark {
                 `--home=/opt`,
                 `--log_level=debug`,
                 `--pruning=nothing`,
-                `--log_format=json`,
+                `--log_format=${logLevel}`,
+                ...(network.trace ? ['--trace'] : []),
               ],
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
