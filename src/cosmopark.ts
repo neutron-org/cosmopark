@@ -160,7 +160,13 @@ export class Cosmopark {
             const name = `${key}_ics`;
             services[name] = {
               image: network.image,
-              command: ['start', `--home=/opt`],
+              command: [
+                'start',
+                `--home=/opt`,
+                `--log_level=debug`,
+                `--pruning=nothing`,
+                `--log_format=json`,
+              ],
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
               ports: [
@@ -177,7 +183,13 @@ export class Cosmopark {
             const name = `${key}_val${i + 1}`;
             services[name] = {
               image: network.image,
-              command: ['start', `--home=/opt`],
+              command: [
+                'start',
+                `--home=/opt`,
+                `--log_level=debug`,
+                `--pruning=nothing`,
+                `--log_format=json`,
+              ],
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
               ...(i === 0 && {
