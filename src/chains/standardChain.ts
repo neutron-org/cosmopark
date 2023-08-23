@@ -177,6 +177,22 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       ),
     ]);
 
+    //upload files
+    if (this.config.upload) {
+      await Promise.all(
+        this.config.upload.map(async (path) => {
+          await dockerCommand(`cp ${path} ${this.network}_val1:/opt/`);
+        }),
+      );
+    }
+
+    //exec post init commands
+    if (this.config.post_init) {
+      for (const command of this.config.post_init) {
+        await this.execInValidator(`${this.network}_val1`, command);
+      }
+    }
+
     //stop all containers
     await this.execForAllValidatorsContainers('stop -t 0 $CONTAINER');
   }
