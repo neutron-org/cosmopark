@@ -181,7 +181,9 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     if (this.config.upload) {
       await Promise.all(
         this.config.upload.map(async (path) => {
-          await dockerCommand(`cp ${path} ${this.network}_val1:/opt/`);
+          await dockerCommand(
+            `cp ${path} ${this.containers[`${this.network}_val1`]}:/opt/`,
+          );
         }),
       );
     }
