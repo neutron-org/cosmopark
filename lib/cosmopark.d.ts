@@ -9,6 +9,7 @@ export declare class Cosmopark {
     relayers: any[];
     constructor(config: CosmoparkConfig);
     static create(config: CosmoparkConfig): Promise<Cosmopark>;
+    awaitFirstBlock: () => Promise<void>;
     stop: () => Promise<void>;
     generateDockerCompose(): Promise<void>;
     validateConfig: (config: CosmoparkConfig) => void;

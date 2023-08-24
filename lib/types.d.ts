@@ -23,6 +23,7 @@ export type CosmoparkNetworkConfig = {
     };
     upload?: string[];
     post_init?: string[];
+    post_start?: string[];
 };
 export type CosmoparkRelayer = {
     type: CosmoparkRelayerTypes;
@@ -49,11 +50,13 @@ export type CosmoparkConfig = {
     portOffset?: number;
     multicontext?: boolean;
     master_mnemonic: string;
+    awaitFirstBlock?: boolean;
     wallets?: {
         [key: string]: CosmoparkWallet;
     };
 };
 export interface CosmoparkChain {
+    execInSomewhere(command: string): Promise<void>;
     filename: string;
     type: string;
     network: string;

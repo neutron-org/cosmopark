@@ -21,4 +21,5 @@ export declare class CosmoparkIcsChain implements CosmoparkChain {
     static create(name: string, config: CosmoparkNetworkConfig, wallets: {
         [key: string]: CosmoparkWallet;
     }, filename: string): Promise<CosmoparkIcsChain>;
+    execInSomewhere(command: string): Promise<void>;
 }

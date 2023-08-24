@@ -25,4 +25,5 @@ export declare class CosmoparkDefaultChain implements CosmoparkChain {
     static create(name: string, config: CosmoparkNetworkConfig, wallets: {
         [key: string]: CosmoparkWallet;
     }, mnemonic: string, filename: string): Promise<CosmoparkDefaultChain>;
+    execInSomewhere(command: string): Promise<void>;
 }
