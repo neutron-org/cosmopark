@@ -229,4 +229,8 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     await c.start(wallets);
     return c;
   }
+
+  async execInSomewhere(command: string): Promise<void> {
+    await this.execInNode(command);
+  }
 }

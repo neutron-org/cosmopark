@@ -301,4 +301,8 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     await c.start(wallets, mnemonic);
     return c;
   }
+
+  async execInSomewhere(command: string): Promise<void> {
+    await this.execInValidator(`${this.network}_val1`, command);
+  }
 }
