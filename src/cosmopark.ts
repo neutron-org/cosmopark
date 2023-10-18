@@ -11,6 +11,7 @@ import dockerCompose from 'docker-compose';
 import { CosmoparkIcsChain } from './chains/icsChain';
 import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { dockerCommand } from 'docker-cli-js';
+import { Relayer } from './relayers/relayers';
 
 const TMP_FILE = '.__cosmopark';
 export class Cosmopark {
@@ -21,7 +22,7 @@ export class Cosmopark {
 
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
-  relayers: any[] = []; //TODO: add relayers type
+  relayers: Relayer[] = [];
   constructor(config: CosmoparkConfig) {
     this.config = config;
     this.context = config.context || 'cosmopark';

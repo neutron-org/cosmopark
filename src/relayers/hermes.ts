@@ -6,6 +6,7 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import _ from 'lodash';
 import { rimraf } from 'rimraf';
+import { Relayer } from './relayers';
 
 const ccvChainConfig = {
   id: '', //chain-id
@@ -108,7 +109,8 @@ const baseConfig = {
   },
   chains: [],
 };
-export class CosmoparkHermesRelayer {
+
+export class CosmoparkHermesRelayer implements Relayer {
   filename: string;
   private name: string;
   private container: string;
@@ -116,6 +118,7 @@ export class CosmoparkHermesRelayer {
   private networksConfig: Record<string, CosmoparkNetworkConfig>;
 
   debug = false;
+
   constructor(
     name: string,
     config: CosmoparkRelayer,
@@ -126,6 +129,10 @@ export class CosmoparkHermesRelayer {
     this.config = config;
     this.networksConfig = networksConfig;
     this.filename = filename;
+  }
+
+  type(): string {
+    return 'hermes';
   }
 
   async start(): Promise<void> {
@@ -140,6 +147,10 @@ export class CosmoparkHermesRelayer {
       cwd: process.cwd(),
       commandOptions: ['--rm', '--entrypoint=sleep', '-d'],
     });
+    if (res.exitCode !== 0) {
+      throw new Error(res.err);
+    }
+  
     this.container = res.out.trim();
     const config = this.prepareConfig();
     await fs.writeFile(`${tempPath}/config.toml`, toml.stringify(config));
@@ -162,6 +173,22 @@ export class CosmoparkHermesRelayer {
     );
     await this.execForContainer(`stop $CONTAINER -t0`);
     await rimraf(tempPath);
+  }
+
+  async pause(): Promise<void> {
+    const res = await dockerCompose.pauseOne(this.container, this.dockerComposeOptions());
+
+    if (res.exitCode !== 0) {
+      throw new Error(res.err);
+    }
+  }
+
+  async unpause(): Promise<void> {
+    const res = await dockerCompose.unpauseOne(this.container, this.dockerComposeOptions());
+
+    if (res.exitCode !== 0) {
+      throw new Error(res.err);
+    }
   }
 
   prepareConfig(): any {
@@ -214,10 +241,14 @@ done
   }
 
   async execInNode(command: string): Promise<IDockerComposeResult> {
-    return dockerCompose.exec(this.name, [`sh`, `-c`, command], {
+    return dockerCompose.exec(this.name, [`sh`, `-c`, command], this.dockerComposeOptions());
+  }
+
+  private dockerComposeOptions(): any {
+    return {
       config: this.filename,
       log: this.debug,
-    });
+    };
   }
 
   static async create(
