@@ -33,6 +33,13 @@ export class Cosmopark {
 
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
     let counter = 0;
+    const ver = await dockerCompose.version();
+    if (ver.exitCode !== 0 || !ver.data.version.match(/^[2-9]/gi)) {
+      throw new Error(
+        `Docker compose version should be 2 or higher, found ${ver.data.version}`,
+      );
+    }
+
     if (config.multicontext && fs.existsSync(TMP_FILE)) {
       counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
     }
