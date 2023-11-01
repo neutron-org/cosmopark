@@ -1,27 +1,29 @@
+import YAML from 'yaml';
+import fs from 'fs';
+import dockerCompose from 'docker-compose';
+import { dockerCommand } from 'docker-cli-js';
+import pino from 'pino';
+
 import {
   CosmoparkChain,
   CosmoparkConfig,
   CosmoparkNetworkPortOutput,
   CosmoparkWallet,
 } from './types';
-import YAML from 'yaml';
-import fs from 'fs';
-import { CosmoparkDefaultChain } from './chains/standardChain';
-import dockerCompose from 'docker-compose';
 import { CosmoparkIcsChain } from './chains/icsChain';
+import { CosmoparkDefaultChain } from './chains/standardChain';
 import { CosmoparkHermesRelayer } from './relayers/hermes';
-import { dockerCommand } from 'docker-cli-js';
+import { logger } from './logger';
 
 const TMP_FILE = '.__cosmopark';
 export class Cosmopark {
-  private debug = false;
   private context: string;
   private filename: string;
+  logLevel: pino.Level = 'info';
   ports: Record<string, CosmoparkNetworkPortOutput> = {};
-
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
-  relayers: any[] = []; //TODO: add relayers type
+  relayers: CosmoparkHermesRelayer[] = []; //TODO: add relayers type
   constructor(config: CosmoparkConfig) {
     this.config = config;
     this.context = config.context || 'cosmopark';
@@ -32,47 +34,65 @@ export class Cosmopark {
   }
 
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
-    let counter = 0;
+    logger.level = config.log_level;
+    const logContext = logger.child({ context: 'main' });
+    logContext.debug('start cosmopark');
     const ver = await dockerCompose.version();
+    logContext.debug({ ver }, 'docker-compose version');
     if (ver.exitCode !== 0 || !ver.data.version.match(/^[2-9]/gi)) {
+      logContext.error(
+        `Docker compose version should be 2 or higher, found ${ver.data.version}`,
+      );
       throw new Error(
         `Docker compose version should be 2 or higher, found ${ver.data.version}`,
       );
     }
-
+    logContext.debug('docker-compose version is ok');
+    let counter = 0;
     if (config.multicontext && fs.existsSync(TMP_FILE)) {
       counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
     }
     config.multicontext && fs.writeFileSync(TMP_FILE, `${counter + 1}`);
+    logContext.debug({ counter }, 'counter of instances');
     const instance = new Cosmopark({ portOffset: counter * 100, ...config });
     if (fs.existsSync(instance.filename)) {
       instance.validateConfig(config);
+      logContext.debug('config is valid');
       try {
-        await dockerCompose.down({
+        const res = await dockerCompose.down({
           config: instance.filename,
           cwd: process.cwd(),
           log: false,
           commandOptions: ['-v', '--remove-orphans'],
         });
+        logContext.debug({ res }, 'docker-compose down');
       } catch (e) {
+        logContext.error({ e }, 'docker-compose down error');
         const res = await dockerCompose.ps({ commandOptions: ['-a'] });
+        logContext.debug({ res }, 'docker-compose ps');
         if (res.exitCode === 0) {
           const containers = res.out
             .split('\n')
             .filter((v) => v.match(/cosmopark_/))
             .map((v) => v.split(' ')[0]);
+          logContext.debug({ containers }, 'containers to stop');
           await dockerCommand(`stop -t0 ${containers.join(' ')}`);
-          await dockerCompose.down({
+          logContext.debug('containers stopped');
+          const downRes = await dockerCompose.down({
             cwd: process.cwd(),
             log: false,
             commandOptions: ['-v', '--remove-orphans'],
           });
+          logContext.debug(downRes, 'docker-compose down');
         } else {
+          logContext.error({ e }, 'docker-compose ps error');
           throw e;
         }
       }
     }
+    logContext.debug('generate docker-compose yaml file');
     await instance.generateDockerCompose();
+    logContext.debug('docker-compose yaml file generated');
     const relayerWallets: Record<string, CosmoparkWallet> =
       config.relayers
         ?.map((relayer) => ({
@@ -83,6 +103,7 @@ export class Cosmopark {
     for (const [key, network] of Object.entries(config.networks)) {
       switch (network.type) {
         case 'ics':
+          logContext.debug('create ics chain');
           instance.networks[key] = await CosmoparkIcsChain.create(
             key,
             network,
@@ -91,6 +112,7 @@ export class Cosmopark {
           );
           break;
         default:
+          logContext.debug('create default chain');
           instance.networks[key] = await CosmoparkDefaultChain.create(
             key,
             network,
@@ -104,6 +126,7 @@ export class Cosmopark {
     for (const [index, relayer] of Object.entries(config.relayers || [])) {
       switch (relayer.type) {
         case 'hermes':
+          logContext.debug('create hermes relayer');
           instance.relayers.push(
             await CosmoparkHermesRelayer.create(
               `relayer_${relayer.type}${index}`,
@@ -120,13 +143,17 @@ export class Cosmopark {
           throw new Error(`Relayer type ${relayer.type} is not supported`);
       }
     }
-    await dockerCompose.upAll({
+    logContext.debug('docker-compose up');
+    const resUp = await dockerCompose.upAll({
       config: instance.filename,
       cwd: process.cwd(),
-      log: instance.debug,
+      log: false,
     });
+    logContext.debug({ resUp }, 'docker-compose up result');
     if (config.awaitFirstBlock) {
+      logContext.debug('await first block');
       await instance.awaitFirstBlock();
+      logContext.debug('first block received');
     }
     for (const [chainName, chainInstance] of Object.entries(
       instance.networks,
@@ -144,6 +171,7 @@ export class Cosmopark {
   awaitFirstBlock = async (): Promise<void> => {
     const timeout = 1000 * 30;
     const start = Date.now();
+    logger.debug('await first block');
     while (Date.now() - start < timeout) {
       try {
         const all = await Promise.all(
@@ -151,8 +179,10 @@ export class Cosmopark {
             try {
               const res = await fetch(`http://127.0.0.1:${ports.rpc}/status`);
               const json = await res.json();
+              logger.debug(json, 'await first block res ok');
               return Number(json.result.sync_info.latest_block_height) > 0;
             } catch (e) {
+              logger.debug(e, 'await first block error');
               return false;
             }
           }),
@@ -165,6 +195,7 @@ export class Cosmopark {
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
+    logger.error('timeout waiting for first block');
     throw new Error(`Timeout waiting for first block`);
   };
 
@@ -172,7 +203,7 @@ export class Cosmopark {
     await dockerCompose.down({
       config: this.filename,
       cwd: process.cwd(),
-      log: this.debug,
+      log: false,
       commandOptions: ['-v', '--remove-orphans', '-t0'],
     });
     if (this.config.multicontext && fs.existsSync(TMP_FILE)) {
@@ -365,6 +396,19 @@ export class Cosmopark {
 
     if (config.portOffset && !Number.isFinite(config.portOffset)) {
       throw new Error(`Port offset should be number`);
+    }
+
+    if (
+      config.log_level &&
+      !Object.values(pino.levels.labels).includes(config.log_level)
+    ) {
+      throw new Error(
+        `Log level should be one of ${Object.values(pino.levels.labels).join(
+          ', ',
+        )}`,
+      );
+    } else {
+      config.log_level = 'info';
     }
 
     for (const [key, network] of Object.entries(config.networks)) {

@@ -1,3 +1,5 @@
+import { Logger } from 'pino';
+
 export type CosmoparkNetworkTypes = 'ics' | 'default';
 
 export type CosmoparkNetworkPortType = 'rpc' | 'grpc' | 'rest';
@@ -55,6 +57,7 @@ export type CosmoparkConfig = {
   networks: {
     [key: string]: CosmoparkNetworkConfig;
   };
+  log_level?: string;
   relayers?: CosmoparkRelayer[];
   context?: string;
   portOffset?: number;
@@ -73,6 +76,7 @@ export interface CosmoparkChain {
   network: string;
   config: CosmoparkNetworkConfig;
   relayers: CosmoparkRelayer[];
+  logger: Logger;
   start(
     wallets: Record<string, CosmoparkWallet>,
     mnemonic: string,

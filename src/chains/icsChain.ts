@@ -1,9 +1,3 @@
-import {
-  CosmoparkChain,
-  CosmoparkNetworkConfig,
-  CosmoparkRelayer,
-  CosmoparkWallet,
-} from '../types';
 import dockerCompose, { IDockerComposeResult } from 'docker-compose';
 import { dockerCommand } from 'docker-cli-js';
 import { rimraf } from 'rimraf';
@@ -11,6 +5,15 @@ import toml from '@iarna/toml';
 import { promises as fs } from 'fs';
 import _ from 'lodash';
 import os from 'os';
+import { Logger } from 'pino';
+
+import {
+  CosmoparkChain,
+  CosmoparkNetworkConfig,
+  CosmoparkRelayer,
+  CosmoparkWallet,
+} from '../types';
+import { logger } from '../logger';
 
 export class CosmoparkIcsChain implements CosmoparkChain {
   type: string;
@@ -19,29 +22,33 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   relayers: CosmoparkRelayer[] = [];
   filename: string;
   private container: string;
-
-  debug = false;
+  logger: Logger;
 
   constructor(name: string, config: CosmoparkNetworkConfig, filename: string) {
     this.type = config.type;
     this.config = config;
     this.network = name;
     this.filename = filename;
+    this.logger = logger.child({ chain: this.network });
   }
 
   async start(wallets: Record<string, CosmoparkWallet>): Promise<void> {
+    this.logger.info(`Starting ics chain ${this.network}`);
     const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
       process.env.COMPOSE_PROJECT_NAME
     }`;
+    this.logger.debug(`Removing temp dir: ${tempDir}`);
     await rimraf(tempDir);
+    this.logger.debug(`Creating temp dir: ${tempDir}`);
     await fs.mkdir(tempDir, { recursive: true });
 
     const res = await dockerCompose.run(`${this.network}_ics`, 'infinity', {
       config: this.filename,
-      log: this.debug,
+      log: false,
       cwd: process.cwd(),
       commandOptions: ['--rm', '--entrypoint=sleep', '-d'],
     });
+    this.logger.debug(res, 'start container to run init stuff');
     this.container = res.out.trim();
 
     //generate genesis
@@ -49,9 +56,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
       `${this.config.binary} init ${this.network} --chain-id=${this.config.chain_id} --home=/opt`,
     );
 
-    if (this.debug) {
-      console.log(`Adding wallets to genesis ${this.network}`, wallets);
-    }
+    this.logger.debug(`Creating wallets for ${this.network}`);
     //add wallets and their balances
     await Promise.all(
       Object.entries(wallets).map(async ([name, wallet]) => {
@@ -63,7 +68,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
         );
       }),
     );
-
+    this.logger.debug(`Copying configs from container ${this.container}`);
     await Promise.all([
       this.execForContainer(
         `cp $CONTAINER:/opt/config/genesis.json ${tempDir}/___genesis.json.tmp`,
@@ -77,6 +82,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     ]);
 
     //prepare configs
+    this.logger.debug(`Preparing configs`);
     if (this.config.genesis_opts) {
       await this.prepareGenesis(
         `${tempDir}/___genesis.json.tmp`,
@@ -96,6 +102,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
       );
     }
     //copy configs
+    this.logger.debug(`Copying configs to container ${this.container}`);
     await Promise.all([
       this.execForContainer(
         `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
@@ -107,10 +114,11 @@ export class CosmoparkIcsChain implements CosmoparkChain {
         `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
       ),
     ]);
+    this.logger.debug(`unsafe-reset-all`);
     await this.execInNode(
       `${this.config.binary} tendermint unsafe-reset-all --home=/opt`,
     );
-
+    this.logger.debug(`add-consumer-section`);
     await this.execInNode(
       `${this.config.binary} add-consumer-section --home=/opt`,
     );
@@ -135,14 +143,17 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   }
 
   private async execForContainer(command: string): Promise<any[]> {
-    if (this.debug) {
-      console.log(
-        `Executing command in container ${this.container}: ${command}`,
-      );
-    }
-    return dockerCommand(command.replace('$CONTAINER', this.container), {
-      echo: this.debug,
-    });
+    this.logger.debug(
+      `Executing command in container ${this.container}: ${command}`,
+    );
+    const out = await dockerCommand(
+      command.replace('$CONTAINER', this.container),
+      {
+        echo: false,
+      },
+    );
+    this.logger.debug(out, 'exec result');
+    return out;
   }
 
   private async prepareTOML(
@@ -170,11 +181,12 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   async stop(): Promise<void> {
     for (let i = 0; i < this.config.validators; i++) {
       const name = `${this.network}_val${i + 1}`;
-      await dockerCompose.stopOne(name, {
+      const res = await dockerCompose.stopOne(name, {
         config: this.filename,
         cwd: process.cwd(),
-        log: this.debug,
+        log: false,
       });
+      this.logger.debug(res, 'stop result');
     }
   }
 
@@ -190,20 +202,21 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   }
 
   async execInNode(command: string): Promise<IDockerComposeResult> {
-    if (this.debug) {
-      console.log(
-        `Executing command in node ${this.network} ${this.network}_ics: ${command}`,
-      );
-    }
+    this.logger.debug(
+      `Executing command in node ${this.network} ${this.network}_ics: ${command}`,
+    );
+
     const res = await dockerCompose.exec(
       `${this.network}_ics`,
       [`sh`, `-c`, command],
       {
-        log: this.debug,
+        log: false,
         config: this.filename,
       },
     );
+    this.logger.debug(res, 'exec result');
     if (res.exitCode !== 0) {
+      this.logger.error(res.out);
       throw new Error(res.out);
     }
     return res;

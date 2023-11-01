@@ -6,7 +6,10 @@ context = "some"
 multicontext = true
 # if you already run instance of cosmopark you can shift the port offset
 portOffset = 0
+# log level for all services (debug, info, warn, error)
+log_level = "debug"
 
+#
 # Networks configuration
 [networks.lsm]
 binary = "liquidstakingd"
@@ -48,11 +51,7 @@ image = "neutron-node"
 prefix = "neutron"
 type = "ics"
 # upload directories and files to the container
-upload = [
-  "./contracts",
-  "./contracts_thirdparty",
-  "./init-neutrond.sh",
-]
+upload = ["./contracts", "./contracts_thirdparty", "./init-neutrond.sh"]
 # run commands in the container after the container is set up before the network is started
 post_init = ["CHAINID=nnn CHAIN_DIR=/opt /opt/init-neutrond.sh"]
 
@@ -75,7 +74,7 @@ minimum-gas-prices = "0.0025untrn"
 [[relayers]]
 balance = "1000000000"
 binary = "hermes"
-config = {"chains.0.trusting_period" = "14days", "chains.0.unbonding_period" = "504h0m0s"}
+config = { "chains.0.trusting_period" = "14days", "chains.0.unbonding_period" = "504h0m0s" }
 connections = [["lsm", "neutron"]]
 image = "hermes"
 log_level = "trace"
