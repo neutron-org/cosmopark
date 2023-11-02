@@ -3,7 +3,6 @@
 master_mnemonic = "metal stay delay motion actor cave elite lend because cook sunset echo"
 # Context is used to generate different docker-compose-{context}.yml files
 context = "some"
-multicontext = true
 # if you already run instance of cosmopark you can shift the port offset
 portOffset = 0
 # log level for all services (debug, info, warn, error)

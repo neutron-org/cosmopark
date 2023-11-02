@@ -14,8 +14,8 @@ import { CosmoparkIcsChain } from './chains/icsChain';
 import { CosmoparkDefaultChain } from './chains/standardChain';
 import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { logger } from './logger';
+import { getMutexCounter, releaseMutex } from './mutex';
 
-const TMP_FILE = '.__cosmopark';
 export class Cosmopark {
   private context: string;
   private filename: string;
@@ -48,11 +48,7 @@ export class Cosmopark {
       );
     }
     logContext.debug('docker-compose version is ok');
-    let counter = 0;
-    if (config.multicontext && fs.existsSync(TMP_FILE)) {
-      counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
-    }
-    config.multicontext && fs.writeFileSync(TMP_FILE, `${counter + 1}`);
+    const counter = await getMutexCounter();
     logContext.debug({ counter }, 'counter of instances');
     const instance = new Cosmopark({ portOffset: counter * 100, ...config });
     if (fs.existsSync(instance.filename)) {
@@ -206,15 +202,7 @@ export class Cosmopark {
       log: false,
       commandOptions: ['-v', '--remove-orphans', '-t0'],
     });
-    if (this.config.multicontext && fs.existsSync(TMP_FILE)) {
-      let counter = Number(fs.readFileSync(TMP_FILE, 'utf-8'));
-      counter--;
-      if (counter) {
-        fs.writeFileSync(TMP_FILE, `${counter}`);
-      } else {
-        fs.unlinkSync(TMP_FILE);
-      }
-    }
+    await releaseMutex();
   };
 
   async generateDockerCompose(): Promise<void> {

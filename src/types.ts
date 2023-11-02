@@ -61,7 +61,6 @@ export type CosmoparkConfig = {
   relayers?: CosmoparkRelayer[];
   context?: string;
   portOffset?: number;
-  multicontext?: boolean;
   master_mnemonic: string;
   awaitFirstBlock?: boolean;
   wallets?: {
