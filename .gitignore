@@ -3,4 +3,5 @@ docker-compose.yml
 contracts
 contracts_thirdparty
 init-neutrond.sh
+init-lsm.sh
 test

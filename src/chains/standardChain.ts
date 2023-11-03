@@ -1,16 +1,19 @@
-import {
-  CosmoparkChain,
-  CosmoparkNetworkConfig,
-  CosmoparkRelayer,
-  CosmoparkWallet,
-} from '../types';
 import dockerCompose, { IDockerComposeResult } from 'docker-compose';
 import { dockerCommand } from 'docker-cli-js';
 import { rimraf } from 'rimraf';
 import toml from '@iarna/toml';
 import { promises as fs } from 'fs';
 import _ from 'lodash';
+import { Logger } from 'pino';
 import os from 'os';
+
+import {
+  CosmoparkChain,
+  CosmoparkNetworkConfig,
+  CosmoparkRelayer,
+  CosmoparkWallet,
+} from '../types';
+import { logger } from '../logger';
 
 export class CosmoparkDefaultChain implements CosmoparkChain {
   filename: string;
@@ -19,35 +22,43 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   config: CosmoparkNetworkConfig;
   relayers: CosmoparkRelayer[] = [];
   private containers: Record<string, string> = {};
-
-  debug = false;
+  logger: Logger;
 
   constructor(name: string, config: CosmoparkNetworkConfig, filename: string) {
     this.type = config.type;
     this.config = config;
     this.network = name;
     this.filename = filename;
+    this.logger = logger.child({ chain: this.network });
   }
 
   async start(
     wallets: Record<string, CosmoparkWallet>,
     mnemonic: string,
   ): Promise<void> {
+    this.logger.info(`Starting default chain ${this.network}`);
+    this.logger.debug(`Removing temp dir: ${os.tmpdir()}/cosmopark`);
     const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
       process.env.COMPOSE_PROJECT_NAME
     }}`;
     await rimraf(tempDir);
+    this.logger.debug(`Creating temp dir: ${tempDir}`);
     await fs.mkdir(tempDir, { recursive: true });
+
     for (let i = 0; i < this.config.validators; i++) {
       const res = await dockerCompose.run(
         `${this.network}_val${i + 1}`,
         'infinity',
         {
           config: this.filename,
-          log: this.debug,
+          log: false,
           cwd: process.cwd(),
           commandOptions: ['--rm', '--entrypoint', 'sleep', '-d'],
         },
+      );
+      this.logger.debug(
+        res,
+        `start container to run init stuff for validator ${i + 1}`,
       );
       if (res.exitCode !== 0) {
         throw new Error(res.err);
@@ -145,6 +156,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     ]);
 
     //prepare configs
+    this.logger.debug(`Preparing configs`);
     if (this.config.genesis_opts) {
       await this.prepareGenesis(
         `${tempDir}/___genesis.json.tmp`,
@@ -165,6 +177,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       );
     }
     //copy configs
+    this.logger.debug(`Copying configs`);
     await Promise.all([
       this.execForAllValidatorsContainers(
         `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
@@ -199,15 +212,19 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     await this.execForAllValidatorsContainers('stop -t 0 $CONTAINER');
   }
 
-  private async execForAllValidatorsContainers(
+  private execForAllValidatorsContainers = async (
     command: string,
-  ): Promise<any[]> {
-    return Object.values(this.containers).map((container) =>
-      dockerCommand(command.replace('$CONTAINER', container), {
-        echo: this.debug,
-      }),
+  ): Promise<any[]> => {
+    const res = await Promise.all(
+      Object.values(this.containers).map((container) =>
+        dockerCommand(command.replace('$CONTAINER', container), {
+          echo: false,
+        }),
+      ),
     );
-  }
+    this.logger.debug(res, `exec result for all validators`);
+    return res;
+  };
 
   private async prepareTOML(
     file: string,
@@ -232,13 +249,15 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   }
 
   async stop(): Promise<void> {
+    this.logger.info(`Stopping default chain ${this.network}`);
     for (let i = 0; i < this.config.validators; i++) {
       const name = `${this.network}_val${i + 1}`;
-      await dockerCompose.stopOne(name, {
+      const res = await dockerCompose.stopOne(name, {
         config: this.filename,
         cwd: process.cwd(),
-        log: this.debug,
+        log: false,
       });
+      this.logger.debug(res, `stop result for validator ${i + 1}`);
     }
   }
 
@@ -257,6 +276,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     command: (n: number) => string,
   ): Promise<{ res: IDockerComposeResult; key: string }[]> {
     const validators = new Array(this.config.validators).fill(0);
+    this.logger.debug(`Executing command in all validators: ${command}`);
     return Promise.all(
       validators.map(async (_, i) => ({
         res: await this.execInValidator(
@@ -272,10 +292,14 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     validator: string,
     command: string,
   ): Promise<IDockerComposeResult> {
+    this.logger.debug(
+      `Executing command in validator ${this.network} ${validator}: ${command}`,
+    );
     const res = await dockerCompose.exec(validator, [`sh`, `-c`, command], {
-      log: this.debug,
+      log: false,
       config: this.filename,
     });
+    this.logger.debug(res, 'exec result');
     if (res.exitCode !== 0) {
       throw new Error(res.err);
     }
@@ -283,11 +307,24 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   }
 
   async startValidator(n: number): Promise<void> {
-    console.log('startValidator', n);
+    this.logger.info(`Starting validator ${n + 1}`);
+    const res = await dockerCompose.restartOne(`${this.network}_val${n + 1}`, {
+      config: this.filename,
+      cwd: process.cwd(),
+      log: false,
+    });
+    this.logger.debug(res, 'restart result');
   }
   async stopValidator(n: number): Promise<void> {
-    console.log('stopValidator', n);
+    this.logger.info(`Stopping validator ${n + 1}`);
+    const res = await dockerCompose.stopOne(`${this.network}_val${n + 1}`, {
+      config: this.filename,
+      cwd: process.cwd(),
+      log: false,
+    });
+    this.logger.debug(res, 'stop result');
   }
+
   static async create(
     name: string,
     config: CosmoparkNetworkConfig,

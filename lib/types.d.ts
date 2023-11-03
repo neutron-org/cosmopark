@@ -1,3 +1,4 @@
+import { Logger } from 'pino';
 export type CosmoparkNetworkTypes = 'ics' | 'default';
 export type CosmoparkNetworkPortType = 'rpc' | 'grpc' | 'rest';
 export type CosmoparkNetworkPortOutput = Record<CosmoparkNetworkPortType, number>;
@@ -45,10 +46,10 @@ export type CosmoparkConfig = {
     networks: {
         [key: string]: CosmoparkNetworkConfig;
     };
+    log_level?: string;
     relayers?: CosmoparkRelayer[];
     context?: string;
     portOffset?: number;
-    multicontext?: boolean;
     master_mnemonic: string;
     awaitFirstBlock?: boolean;
     wallets?: {
@@ -62,6 +63,7 @@ export interface CosmoparkChain {
     network: string;
     config: CosmoparkNetworkConfig;
     relayers: CosmoparkRelayer[];
+    logger: Logger;
     start(wallets: Record<string, CosmoparkWallet>, mnemonic: string): Promise<void>;
     stop(): Promise<void>;
     restart(): Promise<void>;

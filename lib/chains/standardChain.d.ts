@@ -1,5 +1,6 @@
-import { CosmoparkChain, CosmoparkNetworkConfig, CosmoparkRelayer, CosmoparkWallet } from '../types';
 import { IDockerComposeResult } from 'docker-compose';
+import { Logger } from 'pino';
+import { CosmoparkChain, CosmoparkNetworkConfig, CosmoparkRelayer, CosmoparkWallet } from '../types';
 export declare class CosmoparkDefaultChain implements CosmoparkChain {
     filename: string;
     type: string;
@@ -7,7 +8,7 @@ export declare class CosmoparkDefaultChain implements CosmoparkChain {
     config: CosmoparkNetworkConfig;
     relayers: CosmoparkRelayer[];
     private containers;
-    debug: boolean;
+    logger: Logger;
     constructor(name: string, config: CosmoparkNetworkConfig, filename: string);
     start(wallets: Record<string, CosmoparkWallet>, mnemonic: string): Promise<void>;
     private execForAllValidatorsContainers;

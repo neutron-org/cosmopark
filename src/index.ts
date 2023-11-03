@@ -28,6 +28,7 @@ if (require.main === module) {
         console.log('ERROR', e.message);
       }
       console.log('🥳 Done');
+      process.exit(0);
     });
 
   program.parse();
