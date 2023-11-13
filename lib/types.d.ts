@@ -46,7 +46,7 @@ export type CosmoparkConfig = {
     networks: {
         [key: string]: CosmoparkNetworkConfig;
     };
-    log_level?: string;
+    loglevel?: string;
     relayers?: CosmoparkRelayer[];
     context?: string;
     portOffset?: number;

@@ -34,7 +34,7 @@ export class Cosmopark {
   }
 
   static async create(config: CosmoparkConfig): Promise<Cosmopark> {
-    logger.level = config.log_level;
+    logger.level = config.loglevel;
     const logContext = logger.child({ context: 'main' });
     logContext.debug('start cosmopark');
     const ver = await dockerCompose.version();
@@ -210,7 +210,6 @@ export class Cosmopark {
     const volumes = {};
     let networkCounter = 0;
     const portOffset = this.config.portOffset || 0;
-
     for (const [key, network] of Object.entries(this.config.networks)) {
       const rpcPort = portOffset + networkCounter + 26657;
       const restPort = portOffset + networkCounter + 1317;
@@ -224,7 +223,6 @@ export class Cosmopark {
         case 'ics':
           {
             const name = `${key}_ics`;
-            const logLevel = network.loglevel ? 'debug' : 'info';
             services[name] = {
               image: network.image,
               command: [
@@ -232,7 +230,7 @@ export class Cosmopark {
                 `--home=/opt`,
                 `--pruning=nothing`,
                 `--log_format=json`,
-                `--log_level=${logLevel}`,
+                `--log_level=${network.loglevel || 'info'}`,
                 ...(network.trace ? ['--trace'] : []),
               ],
               entrypoint: [network.binary],
@@ -249,7 +247,6 @@ export class Cosmopark {
         default:
           for (let i = 0; i < network.validators; i++) {
             const name = `${key}_val${i + 1}`;
-            const logLevel = network.loglevel ? 'debug' : 'info';
             services[name] = {
               image: network.image,
               command: [
@@ -257,7 +254,7 @@ export class Cosmopark {
                 `--home=/opt`,
                 `--log_level=debug`,
                 `--pruning=nothing`,
-                `--log_format=${logLevel}`,
+                `--log_format=${network.loglevel || 'info'}`,
                 ...(network.trace ? ['--trace'] : []),
               ],
               entrypoint: [network.binary],
@@ -387,8 +384,8 @@ export class Cosmopark {
     }
 
     if (
-      config.log_level &&
-      !Object.values(pino.levels.labels).includes(config.log_level)
+      config.loglevel &&
+      !Object.values(pino.levels.labels).includes(config.loglevel)
     ) {
       throw new Error(
         `Log level should be one of ${Object.values(pino.levels.labels).join(
@@ -396,7 +393,7 @@ export class Cosmopark {
         )}`,
       );
     } else {
-      config.log_level = 'info';
+      config.loglevel = 'info';
     }
 
     for (const [key, network] of Object.entries(config.networks)) {
