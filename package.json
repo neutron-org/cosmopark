@@ -1,6 +1,6 @@
 {
   "name": "@neutron-org/cosmopark",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Start and interact with your cosmos park",
   "main": "./lib/index.js",
   "license": "MIT",
