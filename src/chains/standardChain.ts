@@ -339,7 +339,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     return c;
   }
 
-  async execInSomewhere(command: string): Promise<void> {
-    await this.execInValidator(`${this.network}_val1`, command);
+  async execInSomewhere(command: string): Promise<IDockerComposeResult> {
+    return await this.execInValidator(`${this.network}_val1`, command);
   }
 }

@@ -192,6 +192,9 @@ export class CosmoparkHermesRelayer {
       chainConfig.gas_price.denom = network.config.denom;
       config.chains.push(chainConfig);
     }
+    for (const [key, value] of Object.entries(this.config.config || {})) {
+      _.set(config, key, value);
+    }
     return config;
   }
 

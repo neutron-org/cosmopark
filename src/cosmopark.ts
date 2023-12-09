@@ -1,6 +1,6 @@
 import YAML from 'yaml';
 import fs from 'fs';
-import dockerCompose from 'docker-compose';
+import dockerCompose, { IDockerComposeResult } from 'docker-compose';
 import { dockerCommand } from 'docker-cli-js';
 import pino from 'pino';
 
@@ -195,6 +195,12 @@ export class Cosmopark {
     throw new Error(`Timeout waiting for first block`);
   };
 
+  executeInNetwork = async (
+    network: string,
+    command: string,
+  ): Promise<IDockerComposeResult> =>
+    this.networks[network].execInSomewhere(command);
+
   stop = async (): Promise<void> => {
     await dockerCompose.down({
       config: this.filename,
@@ -236,9 +242,9 @@ export class Cosmopark {
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
               ports: [
-                `127.0.0.1:${rpcPort}:26657`,
-                `127.0.0.1:${restPort}:1317`,
-                `127.0.0.1:${grpcPort}:9090`,
+                `${rpcPort}:26657`,
+                `${restPort}:1317`,
+                `${grpcPort}:9090`,
               ],
             };
             volumes[name] = null;

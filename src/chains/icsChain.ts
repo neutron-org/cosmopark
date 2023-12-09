@@ -243,7 +243,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     return c;
   }
 
-  async execInSomewhere(command: string): Promise<void> {
-    await this.execInNode(command);
+  async execInSomewhere(command: string): Promise<IDockerComposeResult> {
+    return await this.execInNode(command);
   }
 }
