@@ -160,7 +160,6 @@ export class Cosmopark {
         }
       }
     }
-    console.log('done waiting');
     return instance;
   }
 
@@ -194,6 +193,27 @@ export class Cosmopark {
     logger.error('timeout waiting for first block');
     throw new Error(`Timeout waiting for first block`);
   };
+
+  async pauseRelayer(type: 'hermes' | 'neutron', index: number): Promise<void> {
+    await dockerCompose.pauseOne(`relayer_${type}${index}`);
+  }
+
+  async resumeRelayer(
+    type: 'hermes' | 'neutron',
+    index: number,
+  ): Promise<void> {
+    await dockerCompose.unpauseOne(`relayer_${type}${index}`);
+  }
+
+  async pauseNetwork(network: string): Promise<void> {
+    if (this.networks[network].type === 'ics') {
+      await dockerCompose.pauseOne(`${network}_ics`);
+    } else {
+      for (let i = 0; i++; i < this.networks[network].config.validators) {
+        await dockerCompose.pauseOne(`${network}_val${i + 1}`);
+      }
+    }
+  }
 
   executeInNetwork = async (
     network: string,
