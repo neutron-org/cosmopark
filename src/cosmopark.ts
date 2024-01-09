@@ -205,6 +205,13 @@ export class Cosmopark {
     await dockerCompose.unpauseOne(`relayer_${type}${index}`);
   }
 
+  async restartRelayer(
+    type: 'hermes' | 'neutron',
+    index: number,
+  ): Promise<void> {
+    await dockerCompose.restartOne(`relayer_${type}${index}`);
+  }
+
   async pauseNetwork(network: string): Promise<void> {
     if (this.networks[network].type === 'ics') {
       await dockerCompose.pauseOne(`${network}_ics`);
