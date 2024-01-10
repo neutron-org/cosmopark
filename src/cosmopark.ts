@@ -156,10 +156,12 @@ export class Cosmopark {
     )) {
       if (config.networks[chainName].post_start) {
         for (const command of config.networks[chainName].post_start) {
+          logContext.debug({ chainName, command }, 'exec post start command');
           await chainInstance.execInSomewhere(command);
         }
       }
     }
+    logContext.debug('cosmopark started');
     return instance;
   }
 
