@@ -6,7 +6,7 @@ context = "some"
 # if you already run instance of cosmopark you can shift the port offset
 portOffset = 0
 # log level for all services (debug, info, warn, error)
-log_level = "debug"
+loglevel = "debug"
 
 #
 # Networks configuration
