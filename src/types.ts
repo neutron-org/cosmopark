@@ -1,3 +1,4 @@
+import { IDockerComposeResult } from 'docker-compose';
 import { Logger } from 'pino';
 
 export type CosmoparkNetworkTypes = 'ics' | 'default';
@@ -57,7 +58,7 @@ export type CosmoparkConfig = {
   networks: {
     [key: string]: CosmoparkNetworkConfig;
   };
-  log_level?: string;
+  loglevel?: string;
   relayers?: CosmoparkRelayer[];
   context?: string;
   portOffset?: number;
@@ -69,7 +70,7 @@ export type CosmoparkConfig = {
 };
 
 export interface CosmoparkChain {
-  execInSomewhere(command: string): Promise<void>;
+  execInSomewhere(command: string): Promise<IDockerComposeResult>;
   filename: string;
   type: string;
   network: string;

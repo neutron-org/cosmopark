@@ -1,3 +1,4 @@
+import { IDockerComposeResult } from 'docker-compose';
 import pino from 'pino';
 import { CosmoparkChain, CosmoparkConfig, CosmoparkNetworkPortOutput } from './types';
 import { CosmoparkHermesRelayer } from './relayers/hermes';
@@ -12,6 +13,11 @@ export declare class Cosmopark {
     constructor(config: CosmoparkConfig);
     static create(config: CosmoparkConfig): Promise<Cosmopark>;
     awaitFirstBlock: () => Promise<void>;
+    pauseRelayer(type: 'hermes' | 'neutron', index: number): Promise<void>;
+    resumeRelayer(type: 'hermes' | 'neutron', index: number): Promise<void>;
+    restartRelayer(type: 'hermes' | 'neutron', index: number): Promise<void>;
+    pauseNetwork(network: string): Promise<void>;
+    executeInNetwork: (network: string, command: string) => Promise<IDockerComposeResult>;
     stop: () => Promise<void>;
     generateDockerCompose(): Promise<void>;
     validateConfig: (config: CosmoparkConfig) => void;
