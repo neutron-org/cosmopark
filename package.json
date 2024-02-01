@@ -1,6 +1,6 @@
 {
   "name": "@neutron-org/cosmopark",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "description": "Start and interact with your cosmos park",
   "main": "./lib/index.js",
   "license": "MIT",
@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "eslint ./src",
+    "lint": "eslint ./src -f compact",
     "lint-fix": "eslint ./src --fix"
   },
   "dependencies": {
@@ -29,8 +29,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.4.5",
-    "@typescript-eslint/eslint-plugin": "^6.2.0",
-    "@typescript-eslint/parser": "^6.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.20.0",
     "eslint": "^8.45.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^5.0.0",
