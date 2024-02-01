@@ -224,7 +224,7 @@ export class Cosmopark {
     }
   }
 
-  executeInNetwork = async (
+  executeInNetwork = (
     network: string,
     command: string,
   ): Promise<IDockerComposeResult> =>
@@ -240,7 +240,7 @@ export class Cosmopark {
     await releaseMutex();
   };
 
-  async generateDockerCompose(): Promise<void> {
+  generateDockerCompose = (): void => {
     const services = {};
     const volumes = {};
     let networkCounter = 0;
@@ -411,7 +411,7 @@ export class Cosmopark {
       this.filename,
       YAML.stringify(dockerCompose, { indent: 2 }),
     );
-  }
+  };
 
   validateConfig = (config: CosmoparkConfig) => {
     const networks = new Set(Object.keys(config.networks));

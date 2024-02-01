@@ -222,10 +222,12 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     return res;
   }
 
+  // eslint-disable-next-line require-await
   async startValidator(): Promise<void> {
     throw new Error('No validators in ics chain');
   }
 
+  // eslint-disable-next-line require-await
   async stopValidator(): Promise<void> {
     throw new Error('No validators in ics chain');
   }

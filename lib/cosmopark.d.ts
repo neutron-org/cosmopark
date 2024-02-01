@@ -19,6 +19,6 @@ export declare class Cosmopark {
     pauseNetwork(network: string): Promise<void>;
     executeInNetwork: (network: string, command: string) => Promise<IDockerComposeResult>;
     stop: () => Promise<void>;
-    generateDockerCompose(): Promise<void>;
+    generateDockerCompose: () => void;
     validateConfig: (config: CosmoparkConfig) => void;
 }

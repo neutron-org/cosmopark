@@ -210,13 +210,13 @@ done
     return out;
   }
 
-  private async execForContainer(command: string): Promise<any[]> {
+  private execForContainer(command: string): Promise<any[]> {
     return dockerCommand(command.replace('$CONTAINER', this.container), {
       echo: this.debug,
     });
   }
 
-  async execInNode(command: string): Promise<IDockerComposeResult> {
+  execInNode(command: string): Promise<IDockerComposeResult> {
     return dockerCompose.exec(this.name, [`sh`, `-c`, command], {
       config: this.filename,
       log: this.debug,

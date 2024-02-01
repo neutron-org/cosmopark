@@ -137,23 +137,21 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     );
     // retrieve configs
 
-    await Promise.all([
-      dockerCommand(
-        `cp ${
-          this.containers[`${this.network}_val1`]
-        }:/opt/config/genesis.json ${tempDir}/___genesis.json.tmp`,
-      ),
-      dockerCommand(
-        `cp ${
-          this.containers[`${this.network}_val1`]
-        }:/opt/config/config.toml ${tempDir}/___config.toml.tmp`,
-      ),
-      dockerCommand(
-        `cp ${
-          this.containers[`${this.network}_val1`]
-        }:/opt/config/app.toml ${tempDir}/___app.toml.tmp`,
-      ),
-    ]);
+    await dockerCommand(
+      `cp ${
+        this.containers[`${this.network}_val1`]
+      }:/opt/config/genesis.json ${tempDir}/___genesis.json.tmp`,
+    );
+    await dockerCommand(
+      `cp ${
+        this.containers[`${this.network}_val1`]
+      }:/opt/config/config.toml ${tempDir}/___config.toml.tmp`,
+    );
+    await dockerCommand(
+      `cp ${
+        this.containers[`${this.network}_val1`]
+      }:/opt/config/app.toml ${tempDir}/___app.toml.tmp`,
+    );
 
     //prepare configs
     this.logger.debug(`Preparing configs`);
@@ -178,27 +176,24 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     }
     //copy configs
     this.logger.debug(`Copying configs`);
-    await Promise.all([
-      this.execForAllValidatorsContainers(
-        `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
-      ),
-      this.execForAllValidatorsContainers(
-        `cp ${tempDir}/___app.toml.tmp $CONTAINER:/opt/config/app.toml`,
-      ),
-      this.execForAllValidatorsContainers(
-        `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
-      ),
-    ]);
+
+    await this.execForAllValidatorsContainers(
+      `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
+    );
+    await this.execForAllValidatorsContainers(
+      `cp ${tempDir}/___app.toml.tmp $CONTAINER:/opt/config/app.toml`,
+    );
+    await this.execForAllValidatorsContainers(
+      `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
+    );
 
     //upload files
     if (this.config.upload) {
-      await Promise.all(
-        this.config.upload.map(async (path) => {
-          await dockerCommand(
-            `cp ${path} ${this.containers[`${this.network}_val1`]}:/opt/`,
-          );
-        }),
-      );
+      for (const path of this.config.upload) {
+        await dockerCommand(
+          `cp ${path} ${this.containers[`${this.network}_val1`]}:/opt/`,
+        );
+      }
     }
 
     //exec post init commands
@@ -277,7 +272,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   ): Promise<{ res: IDockerComposeResult; key: string }[]> {
     const validators = new Array(this.config.validators).fill(0);
     this.logger.debug(`Executing command in all validators: ${command}`);
-    return Promise.all(
+    return await Promise.all(
       validators.map(async (_, i) => ({
         res: await this.execInValidator(
           `${this.network}_val${i + 1}`,
