@@ -21,6 +21,7 @@ export type CosmoparkNetworkConfig = {
   validators_balance?: string[] | string;
   loglevel?: string;
   trace?: boolean;
+  public?: boolean;
   genesis_opts?: {
     [key: string]: any;
   };

@@ -131,7 +131,7 @@ export class CosmoparkHermesRelayer {
   async start(): Promise<void> {
     const tempPath = `${os.tmpdir()}/cosmopark/${this.name}_${
       process.env.COMPOSE_PROJECT_NAME
-    }}`;
+    }`;
     await rimraf(tempPath);
     await fs.mkdir(tempPath, { recursive: true });
     const res = await dockerCompose.run(this.name, 'infinity', {

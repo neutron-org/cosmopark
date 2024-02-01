@@ -40,7 +40,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     this.logger.debug(`Removing temp dir: ${os.tmpdir()}/cosmopark`);
     const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
       process.env.COMPOSE_PROJECT_NAME
-    }}`;
+    }`;
     await rimraf(tempDir);
     this.logger.debug(`Creating temp dir: ${tempDir}`);
     await fs.mkdir(tempDir, { recursive: true });

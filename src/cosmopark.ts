@@ -249,6 +249,7 @@ export class Cosmopark {
       const rpcPort = portOffset + networkCounter + 26657;
       const restPort = portOffset + networkCounter + 1317;
       const grpcPort = portOffset + networkCounter + 9090;
+      const service_interface = network.public ? '' : '127.0.0.1:';
       this.ports[key] = {
         rpc: rpcPort,
         rest: restPort,
@@ -271,9 +272,9 @@ export class Cosmopark {
               entrypoint: [network.binary],
               volumes: [`${name}:/opt`],
               ports: [
-                `${rpcPort}:26657`,
-                `${restPort}:1317`,
-                `${grpcPort}:9090`,
+                `${service_interface}${rpcPort}:26657`,
+                `${service_interface}${restPort}:1317`,
+                `${service_interface}${grpcPort}:9090`,
               ],
             };
             volumes[name] = null;
@@ -296,9 +297,15 @@ export class Cosmopark {
               volumes: [`${name}:/opt`],
               ...(i === 0 && {
                 ports: [
-                  `127.0.0.1:${portOffset + networkCounter + 26657}:26657`,
-                  `127.0.0.1:${portOffset + networkCounter + 1317}:1317`,
-                  `127.0.0.1:${portOffset + networkCounter + 9090}:9090`,
+                  `${service_interface}${
+                    portOffset + networkCounter + 26657
+                  }:26657`,
+                  `${service_interface}${
+                    portOffset + networkCounter + 1317
+                  }:1317`,
+                  `${service_interface}${
+                    portOffset + networkCounter + 9090
+                  }:9090`,
                 ],
               }),
             };
