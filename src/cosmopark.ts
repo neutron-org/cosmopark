@@ -88,6 +88,18 @@ export class Cosmopark {
     }
     logContext.debug('generate docker-compose yaml file');
     await instance.generateDockerCompose();
+    // just in case there are some volumes left
+    try {
+      const res = await dockerCompose.down({
+        config: instance.filename,
+        cwd: process.cwd(),
+        log: false,
+        commandOptions: ['-v', '--remove-orphans'],
+      });
+      logContext.debug({ res }, 'docker-compose down');
+    } catch (e) {
+      //
+    }
     logContext.debug('docker-compose yaml file generated');
     const relayerWallets: Record<string, CosmoparkWallet> =
       config.relayers
