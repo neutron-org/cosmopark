@@ -9,6 +9,13 @@ export declare class CosmoparkIcsChain implements CosmoparkChain {
     filename: string;
     private container;
     logger: Logger;
+    commands: {
+        init: string;
+        keysAdd: string;
+        addGenesisAmount: string;
+        addConsumerSection: string;
+        unsafeResetAll: string;
+    };
     constructor(name: string, config: CosmoparkNetworkConfig, filename: string);
     start(wallets: Record<string, CosmoparkWallet>): Promise<void>;
     private execForContainer;

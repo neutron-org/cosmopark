@@ -23,6 +23,13 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   filename: string;
   private container: string;
   logger: Logger;
+  commands = {
+    init: 'init',
+    keysAdd: 'keys add',
+    addGenesisAmount: 'add-genesis-account',
+    addConsumerSection: 'add-consumer-section',
+    unsafeResetAll: 'tendermint unsafe-reset-all',
+  };
 
   constructor(name: string, config: CosmoparkNetworkConfig, filename: string) {
     this.type = config.type;
@@ -30,6 +37,10 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     this.network = name;
     this.filename = filename;
     this.logger = logger.child({ chain: this.network });
+    this.commands = {
+      ...this.commands,
+      ...config.commands,
+    };
   }
 
   async start(wallets: Record<string, CosmoparkWallet>): Promise<void> {
@@ -53,7 +64,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
 
     //generate genesis
     await this.execInNode(
-      `${this.config.binary} init ${this.network} --chain-id=${this.config.chain_id} --home=/opt`,
+      `${this.config.binary} ${this.commands.init} ${this.network} --chain-id=${this.config.chain_id} --home=/opt`,
     );
 
     this.logger.debug(`Creating wallets for ${this.network}`);
@@ -61,10 +72,10 @@ export class CosmoparkIcsChain implements CosmoparkChain {
 
     for (const [name, wallet] of Object.entries(wallets)) {
       await this.execInNode(
-        `echo "${wallet.mnemonic}" | ${this.config.binary} keys add ${name} --home=/opt --recover --keyring-backend=test`,
+        `echo "${wallet.mnemonic}" | ${this.config.binary} ${this.commands.keysAdd} ${name} --home=/opt --recover --keyring-backend=test`,
       );
       await this.execInNode(
-        `${this.config.binary} add-genesis-account ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
+        `${this.config.binary} ${this.commands.addGenesisAmount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
       );
     }
 
@@ -115,11 +126,11 @@ export class CosmoparkIcsChain implements CosmoparkChain {
 
     this.logger.debug(`unsafe-reset-all`);
     await this.execInNode(
-      `${this.config.binary} tendermint unsafe-reset-all --home=/opt`,
+      `${this.config.binary} ${this.commands.unsafeResetAll} --home=/opt`,
     );
     this.logger.debug(`add-consumer-section`);
     await this.execInNode(
-      `${this.config.binary} add-consumer-section --home=/opt`,
+      `${this.config.binary} ${this.commands.addConsumerSection} --home=/opt`,
     );
 
     //upload files

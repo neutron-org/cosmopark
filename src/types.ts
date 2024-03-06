@@ -34,6 +34,7 @@ export type CosmoparkNetworkConfig = {
   upload?: string[];
   post_init?: string[];
   post_start?: string[];
+  commands?: Record<string, string>;
 };
 
 export type CosmoparkRelayer = {
@@ -86,4 +87,5 @@ export interface CosmoparkChain {
   restart(): Promise<void>;
   startValidator(n: number): Promise<void>;
   stopValidator(n: number): Promise<void>;
+  commands?: Record<string, string>;
 }

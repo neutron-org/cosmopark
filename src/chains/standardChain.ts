@@ -23,6 +23,14 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   relayers: CosmoparkRelayer[] = [];
   private containers: Record<string, string> = {};
   logger: Logger;
+  commands = {
+    init: 'init',
+    keysAdd: 'keys add',
+    addGenesisAccount: 'add-genesis-account',
+    gentx: 'gentx',
+    showNodeId: 'tendermint show-node-id',
+    collectGenTx: 'collect-gentxs',
+  };
 
   constructor(name: string, config: CosmoparkNetworkConfig, filename: string) {
     this.type = config.type;
@@ -30,6 +38,10 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     this.network = name;
     this.filename = filename;
     this.logger = logger.child({ chain: this.network });
+    this.commands = {
+      ...this.commands,
+      ...(config.commands || {}),
+    };
   }
 
   async start(
@@ -68,7 +80,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     //generate genesis
     await this.execInAllValidators(
       (n: number) =>
-        `${this.config.binary} init val${this.network}${n} --chain-id=${this.config.chain_id} --home=/opt`,
+        `${this.config.binary} ${this.commands.init} val${this.network}${n} --chain-id=${this.config.chain_id} --home=/opt`,
     );
     const validatorBalance = this.config.validators_balance;
     //add all validators keys and balances
@@ -76,13 +88,17 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       new Array(this.config.validators).fill(0).map(async (_, i) => {
         await this.execInAllValidators(
           () =>
-            `echo "${mnemonic}" | ${this.config.binary} keys add val${
+            `echo "${mnemonic}" | ${this.config.binary} ${
+              this.commands.keysAdd
+            } val${i + 1} --home=/opt --recover --account=${
               i + 1
-            } --home=/opt --recover --account=${i + 1} --keyring-backend=test`,
+            } --keyring-backend=test`,
         );
         await this.execInAllValidators(
           () =>
-            `${this.config.binary} add-genesis-account val${i + 1} ${
+            `${this.config.binary} ${this.commands.addGenesisAccount} val${
+              i + 1
+            } ${
               Array.isArray(validatorBalance)
                 ? validatorBalance[i]
                 : validatorBalance
@@ -95,18 +111,18 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       Object.entries(wallets).map(async ([name, wallet]) => {
         await this.execInAllValidators(
           () =>
-            `echo "${wallet.mnemonic}" | ${this.config.binary} keys add ${name} --home=/opt --recover --keyring-backend=test`,
+            `echo "${wallet.mnemonic}" | ${this.config.binary} ${this.commands.keysAdd} ${name} --home=/opt --recover --keyring-backend=test`,
         );
         await this.execInAllValidators(
           () =>
-            `${this.config.binary} add-genesis-account ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
+            `${this.config.binary} ${this.commands.addGenesisAccount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
         );
       }),
     );
     //gentx
     await this.execInAllValidators(
       (n: number) =>
-        `${this.config.binary} gentx val${n + 1} ${
+        `${this.config.binary} ${this.commands.gentx} val${n + 1} ${
           Array.isArray(validatorBalance)
             ? validatorBalance[n]
             : validatorBalance
@@ -121,7 +137,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     //collect peer ids
     const peerIds = (
       await this.execInAllValidators(
-        () => `${this.config.binary} tendermint show-node-id --home=/opt`,
+        () => `${this.config.binary} ${this.commands.showNodeId} --home=/opt`,
       )
     ).map((v) => `${v.res.out.trim()}@${v.key}:26656`);
 
@@ -133,7 +149,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     );
     await this.execInValidator(
       `${this.network}_val1`,
-      `${this.config.binary} collect-gentxs --home=/opt`,
+      `${this.config.binary} ${this.commands.collectGenTx} --home=/opt`,
     );
     // retrieve configs
 
