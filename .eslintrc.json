@@ -12,14 +12,17 @@
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 12,
-    "sourceType": "module"
+    "sourceType": "module",
+    "project": "./tsconfig.json" 
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
+    "require-await": "error",
     "prettier/prettier": ["error", {}, { "usePrettierrc": true }],
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-var-requires": "off",
     "@typescript-eslint/no-empty-interface": "off",
+    "@typescript-eslint/no-floating-promises": ["error"],
     "@typescript-eslint/no-unused-vars": [
       "error",
       { "ignoreRestSiblings": true }

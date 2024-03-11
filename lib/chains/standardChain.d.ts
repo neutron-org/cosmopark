@@ -9,6 +9,14 @@ export declare class CosmoparkDefaultChain implements CosmoparkChain {
     relayers: CosmoparkRelayer[];
     private containers;
     logger: Logger;
+    commands: {
+        init: string;
+        keysAdd: string;
+        addGenesisAccount: string;
+        gentx: string;
+        showNodeId: string;
+        collectGenTx: string;
+    };
     constructor(name: string, config: CosmoparkNetworkConfig, filename: string);
     start(wallets: Record<string, CosmoparkWallet>, mnemonic: string): Promise<void>;
     private execForAllValidatorsContainers;

@@ -88,6 +88,18 @@ export class Cosmopark {
     }
     logContext.debug('generate docker-compose yaml file');
     await instance.generateDockerCompose();
+    // just in case there are some volumes left
+    try {
+      const res = await dockerCompose.down({
+        config: instance.filename,
+        cwd: process.cwd(),
+        log: false,
+        commandOptions: ['-v', '--remove-orphans'],
+      });
+      logContext.debug({ res }, 'docker-compose down');
+    } catch (e) {
+      //
+    }
     logContext.debug('docker-compose yaml file generated');
     const relayerWallets: Record<string, CosmoparkWallet> =
       config.relayers
@@ -224,7 +236,7 @@ export class Cosmopark {
     }
   }
 
-  executeInNetwork = async (
+  executeInNetwork = (
     network: string,
     command: string,
   ): Promise<IDockerComposeResult> =>
@@ -240,7 +252,7 @@ export class Cosmopark {
     await releaseMutex();
   };
 
-  async generateDockerCompose(): Promise<void> {
+  generateDockerCompose = (): void => {
     const services = {};
     const volumes = {};
     let networkCounter = 0;
@@ -411,7 +423,7 @@ export class Cosmopark {
       this.filename,
       YAML.stringify(dockerCompose, { indent: 2 }),
     );
-  }
+  };
 
   validateConfig = (config: CosmoparkConfig) => {
     const networks = new Set(Object.keys(config.networks));
