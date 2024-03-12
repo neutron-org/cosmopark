@@ -24,6 +24,7 @@ export class Cosmopark {
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
   relayers: CosmoparkHermesRelayer[] = []; //TODO: add relayers type
+  query_relayer: CosmoparkHermesRelayer | null = null;
   constructor(config: CosmoparkConfig) {
     this.config = config;
     this.context = config.context || 'cosmopark';
@@ -145,7 +146,12 @@ export class Cosmopark {
           );
           break;
         case 'neutron':
-          // nothing to do here
+          instance.query_relayer = new CosmoparkHermesRelayer(
+            `relayer_${relayer.type}${index}`,
+            relayer,
+            config.networks,
+            instance.filename,
+          );
           break;
         default:
           throw new Error(`Relayer type ${relayer.type} is not supported`);
@@ -241,6 +247,14 @@ export class Cosmopark {
     command: string,
   ): Promise<IDockerComposeResult> =>
     this.networks[network].execInSomewhere(command);
+
+  executeInQueryRelayer = (command: string): Promise<IDockerComposeResult> => {
+    if (!this.query_relayer) {
+      throw new Error('No query relayer found');
+    }
+
+    return this.query_relayer.execInNode(command);
+  };
 
   stop = async (): Promise<void> => {
     await dockerCompose.down({

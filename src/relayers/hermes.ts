@@ -1,4 +1,8 @@
-import { CosmoparkNetworkConfig, CosmoparkRelayer } from '../types';
+import {
+  CosmoparkNetworkConfig,
+  CosmoparkRelayer,
+  CosmoparkRelayerTypes,
+} from '../types';
 import dockerCompose, { IDockerComposeResult } from 'docker-compose';
 import { dockerCommand } from 'docker-cli-js';
 import toml from '@iarna/toml';
@@ -126,6 +130,10 @@ export class CosmoparkHermesRelayer {
     this.config = config;
     this.networksConfig = networksConfig;
     this.filename = filename;
+  }
+
+  get type(): CosmoparkRelayerTypes {
+    return this.config.type;
   }
 
   async start(): Promise<void> {
