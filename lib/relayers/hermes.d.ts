@@ -1,4 +1,4 @@
-import { CosmoparkNetworkConfig, CosmoparkRelayer } from '../types';
+import { CosmoparkNetworkConfig, CosmoparkRelayer, CosmoparkRelayerTypes } from '../types';
 import { IDockerComposeResult } from 'docker-compose';
 export declare class CosmoparkHermesRelayer {
     filename: string;
@@ -8,6 +8,7 @@ export declare class CosmoparkHermesRelayer {
     private networksConfig;
     debug: boolean;
     constructor(name: string, config: CosmoparkRelayer, networksConfig: Record<string, CosmoparkNetworkConfig>, filename: string);
+    get type(): CosmoparkRelayerTypes;
     start(): Promise<void>;
     prepareConfig(): any;
     private prepareStarter;
