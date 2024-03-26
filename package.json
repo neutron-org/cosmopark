@@ -24,7 +24,7 @@
     "docker-compose": "^0.24.2",
     "lodash": "^4.17.21",
     "pino": "^8.16.1",
-    "rimraf": "^5.0.1",
+    "rimraf": "^5.0.5",
     "yaml": "^2.3.1"
   },
   "devDependencies": {
