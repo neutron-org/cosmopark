@@ -8,7 +8,7 @@ It supports standard cosmos-sdk chains and ICS (as for now tested with Neutron).
 ### CLI
 
 - prepare docker images (or just use some from the dockerhub)
-- create config (see [Configuration](#Configuration)
+- create config (see [Configuration](#Configuration))
 - run `npx @neutron-org/cosmopark start your_config.toml`
 
 ### Using as a library from integration tests
