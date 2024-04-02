@@ -12,7 +12,7 @@ export declare class CosmoparkIcsChain implements CosmoparkChain {
     commands: {
         init: string;
         keysAdd: string;
-        addGenesisAmount: string;
+        addGenesisAccount: string;
         addConsumerSection: string;
         unsafeResetAll: string;
     };

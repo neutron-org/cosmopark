@@ -41,6 +41,7 @@ export type CosmoparkRelayer = {
   type: CosmoparkRelayerTypes;
   networks: string[];
   connections?: string[][];
+  environment?: Record<string, string>;
   image: string;
   log_level: string;
   binary: string;
@@ -49,7 +50,11 @@ export type CosmoparkRelayer = {
   balance?: string;
 };
 
-export type CosmoparkRelayerTypes = 'hermes' | 'default' | 'neutron';
+export type CosmoparkRelayerTypes =
+  | 'hermes'
+  | 'default'
+  | 'neutron'
+  | 'coordinator';
 
 export type CosmoparkWallet = {
   mnemonic: string;

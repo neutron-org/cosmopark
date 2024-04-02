@@ -26,7 +26,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   commands = {
     init: 'init',
     keysAdd: 'keys add',
-    addGenesisAmount: 'add-genesis-account',
+    addGenesisAccount: 'add-genesis-account',
     addConsumerSection: 'add-consumer-section',
     unsafeResetAll: 'tendermint unsafe-reset-all',
   };
@@ -45,6 +45,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
 
   async start(wallets: Record<string, CosmoparkWallet>): Promise<void> {
     this.logger.info(`Starting ics chain ${this.network}`);
+    console.log(`Starting ics chain ${this.network}`);
     const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
       process.env.COMPOSE_PROJECT_NAME
     }`;
@@ -70,12 +71,13 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     this.logger.debug(`Creating wallets for ${this.network}`);
     //add wallets and their balances
 
+    console.log('wallets', wallets);
     for (const [name, wallet] of Object.entries(wallets)) {
       await this.execInNode(
         `echo "${wallet.mnemonic}" | ${this.config.binary} ${this.commands.keysAdd} ${name} --home=/opt --recover --keyring-backend=test`,
       );
       await this.execInNode(
-        `${this.config.binary} ${this.commands.addGenesisAmount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
+        `${this.config.binary} ${this.commands.addGenesisAccount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
       );
     }
 
