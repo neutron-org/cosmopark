@@ -26,7 +26,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   commands = {
     init: 'init',
     keysAdd: 'keys add',
-    addGenesisAmount: 'add-genesis-account',
+    addGenesisAccount: 'add-genesis-account',
     addConsumerSection: 'add-consumer-section',
     unsafeResetAll: 'tendermint unsafe-reset-all',
   };
@@ -75,7 +75,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
         `echo "${wallet.mnemonic}" | ${this.config.binary} ${this.commands.keysAdd} ${name} --home=/opt --recover --keyring-backend=test`,
       );
       await this.execInNode(
-        `${this.config.binary} ${this.commands.addGenesisAmount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
+        `${this.config.binary} ${this.commands.addGenesisAccount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
       );
     }
 

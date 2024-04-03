@@ -24,7 +24,6 @@ export class Cosmopark {
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
   relayers: CosmoparkHermesRelayer[] = []; //TODO: add relayers type
-  query_relayer: CosmoparkHermesRelayer | null = null;
   constructor(config: CosmoparkConfig) {
     this.config = config;
     this.context = config.context || 'cosmopark';
@@ -146,12 +145,10 @@ export class Cosmopark {
           );
           break;
         case 'neutron':
-          instance.query_relayer = new CosmoparkHermesRelayer(
-            `relayer_${relayer.type}${index}`,
-            relayer,
-            config.networks,
-            instance.filename,
-          );
+          // nothing to do here
+          break;
+        case 'coordinator':
+          // nothing to do here
           break;
         default:
           throw new Error(`Relayer type ${relayer.type} is not supported`);
@@ -248,14 +245,6 @@ export class Cosmopark {
   ): Promise<IDockerComposeResult> =>
     this.networks[network].execInSomewhere(command);
 
-  executeInQueryRelayer = (command: string): Promise<IDockerComposeResult> => {
-    if (!this.query_relayer) {
-      throw new Error('No query relayer found');
-    }
-
-    return this.query_relayer.execInNode(command);
-  };
-
   stop = async (): Promise<void> => {
     await dockerCompose.down({
       config: this.filename,
@@ -343,87 +332,105 @@ export class Cosmopark {
     const prevConnections = [];
     for (const [index, relayer] of Object.entries(this.config.relayers || [])) {
       const name = `relayer_${relayer.type}${index}`;
-      switch (relayer.type) {
-        case 'hermes':
-          services[name] = {
-            image: relayer.image,
-            command: ['-c', `/root/start.sh`],
-            volumes: [`${name}:/root`],
-            entrypoint: ['/bin/bash'],
-            depends_on: relayer.networks.map(
-              (network) =>
-                `${network}${
-                  this.config.networks[network].type === 'ics'
-                    ? '_ics'
-                    : '_val1'
-                }`,
-            ),
+      if (relayer.type === 'hermes') {
+        services[name] = {
+          image: relayer.image,
+          command: ['-c', `/root/start.sh`],
+          volumes: [`${name}:/root`],
+          entrypoint: ['/bin/bash'],
+          depends_on: relayer.networks.map(
+            (network) =>
+              `${network}${
+                this.config.networks[network].type === 'ics' ? '_ics' : '_val1'
+              }`,
+          ),
+        };
+        volumes[name] = null;
+        prevConnections.push(...(relayer.connections || []));
+      } else if (relayer.type === 'neutron' || relayer.type === 'coordinator') {
+        let id = 0;
+        const icsNetwork = relayer.networks.find(
+          (network) => this.config.networks[network].type === 'ics',
+        );
+        const targetNetwork = relayer.networks.find(
+          (network) => this.config.networks[network].type !== 'ics',
+        );
+        for (const [network1, network2] of prevConnections) {
+          if (
+            (network1 === icsNetwork && network2 === targetNetwork) ||
+            (network2 === icsNetwork && network1 === targetNetwork)
+          ) {
+            break;
+          }
+          if (network1 === icsNetwork || network2 === icsNetwork) {
+            id++;
+          }
+        }
+        if (!icsNetwork || !targetNetwork) {
+          throw new Error(
+            `Relayer:${relayer.type} should be linked to 2 networks (1 ics and 1 default)`,
+          );
+        }
+
+        let environment: Record<string, string | number | boolean> = {
+          NODE: `${icsNetwork}_ics`,
+          LOGGER_LEVEL: relayer.log_level,
+          RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX:
+            this.config.networks[icsNetwork].prefix,
+          RELAYER_NEUTRON_CHAIN_RPC_ADDR: `tcp://${icsNetwork}_ics:26657`,
+          RELAYER_NEUTRON_CHAIN_REST_ADDR: `http://${icsNetwork}_ics:1317`,
+          RELAYER_NEUTRON_CHAIN_HOME_DIR: '/data',
+          RELAYER_NEUTRON_CHAIN_SIGN_KEY_NAME: `relayer_${index}`,
+          RELAYER_NEUTRON_CHAIN_GAS_PRICES: `0.5${this.config.networks[icsNetwork].denom}`,
+          RELAYER_NEUTRON_CHAIN_GAS_ADJUSTMENT: 1.5,
+          RELAYER_NEUTRON_CHAIN_CONNECTION_ID: `connection-${id}`,
+          RELAYER_NEUTRON_CHAIN_DEBUG: true,
+          RELAYER_NEUTRON_CHAIN_ACCOUNT_PREFIX:
+            this.config.networks[icsNetwork].prefix,
+          RELAYER_NEUTRON_CHAIN_KEYRING_BACKEND: 'test',
+          RELAYER_TARGET_CHAIN_RPC_ADDR: `tcp://${targetNetwork}_val1:26657`,
+          RELAYER_TARGET_CHAIN_REST_ADDR: `http://${targetNetwork}_val1:1317`,
+          RELAYER_TARGET_CHAIN_DENOM: this.config.networks[targetNetwork].denom,
+          RELAYER_TARGET_CHAIN_GAS_PRICES: `0.5${this.config.networks[targetNetwork].denom}`,
+          RELAYER_TARGET_CHAIN_ACCOUNT_PREFIX:
+            this.config.networks[targetNetwork].prefix,
+          RELAYER_TARGET_CHAIN_VALIDATOR_ACCOUNT_PREFIX: `${this.config.networks[targetNetwork].prefix}valoper`,
+          RELAYER_TARGET_CHAIN_DEBUG: true,
+          RELAYER_ALLOW_KV_CALLBACKS: true,
+        };
+
+        if (relayer.type === 'neutron') {
+          environment = {
+            ...environment,
+            RELAYER_REGISTRY_ADDRESSES: '',
+            RELAYER_ALLOW_TX_QUERIES: true,
+            RELAYER_STORAGE_PATH: '/data/relayer/storage/leveldb',
+            RELAYER_LISTEN_ADDR: '0.0.0.0:9999',
           };
-          volumes[name] = null;
-          prevConnections.push(...(relayer.connections || []));
-          break;
-        case 'neutron': {
-          let id = 0;
-          const icsNetwork = relayer.networks.find(
-            (network) => this.config.networks[network].type === 'ics',
-          );
-          const otherNetwork = relayer.networks.find(
-            (network) => this.config.networks[network].type !== 'ics',
-          );
-          for (const [network1, network2] of prevConnections) {
-            if (
-              (network1 === icsNetwork && network2 === otherNetwork) ||
-              (network2 === icsNetwork && network1 === otherNetwork)
-            ) {
-              break;
-            }
-            if (network1 === icsNetwork || network2 === icsNetwork) {
-              id++;
-            }
-          }
-          if (!icsNetwork || !otherNetwork) {
-            throw new Error(
-              `Relayer:${relayer.type} should be linked to 2 networks (1 ics and 1 default)`,
-            );
-          }
-          services[name] = {
-            image: relayer.image,
-            entrypoint: ['./run.sh'],
-            depends_on: relayer.networks.map(
-              (network) =>
-                `${network}${
-                  this.config.networks[network].type === 'ics'
-                    ? '_ics'
-                    : '_val1'
-                }`,
-            ),
-            volumes: [`${icsNetwork}_ics:/data`],
-            environment: [
-              `NODE=${icsNetwork}_ics`,
-              `LOGGER_LEVEL=${relayer.log_level}`,
-              `RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX=${this.config.networks[icsNetwork].prefix}`,
-              `RELAYER_NEUTRON_CHAIN_RPC_ADDR=tcp://${icsNetwork}_ics:26657`,
-              `RELAYER_NEUTRON_CHAIN_REST_ADDR=http://${icsNetwork}_ics:1317`,
-              `RELAYER_NEUTRON_CHAIN_HOME_DIR=/data`,
-              `RELAYER_NEUTRON_CHAIN_SIGN_KEY_NAME=relayer_${index}`,
-              `RELAYER_NEUTRON_CHAIN_GAS_PRICES=0.5${this.config.networks[icsNetwork].denom}`,
-              `RELAYER_NEUTRON_CHAIN_GAS_ADJUSTMENT=1.5`,
-              `RELAYER_NEUTRON_CHAIN_CONNECTION_ID=connection-${id}`,
-              `RELAYER_NEUTRON_CHAIN_DEBUG=true`,
-              `RELAYER_NEUTRON_CHAIN_ACCOUNT_PREFIX=${this.config.networks[icsNetwork].prefix}`,
-              `RELAYER_NEUTRON_CHAIN_KEYRING_BACKEND=test`,
-              `RELAYER_TARGET_CHAIN_RPC_ADDR=tcp://${otherNetwork}_val1:26657`,
-              `RELAYER_TARGET_CHAIN_ACCOUNT_PREFIX=${this.config.networks[otherNetwork].prefix}`,
-              `RELAYER_TARGET_CHAIN_VALIDATOR_ACCOUNT_PREFIX=${this.config.networks[otherNetwork].prefix}valoper`,
-              `RELAYER_TARGET_CHAIN_DEBUG=true`,
-              `RELAYER_REGISTRY_ADDRESSES=`,
-              `RELAYER_ALLOW_TX_QUERIES=true`,
-              `RELAYER_ALLOW_KV_CALLBACKS=true`,
-              `RELAYER_STORAGE_PATH=/data/relayer/storage/leveldb`,
-              `RELAYER_LISTEN_ADDR=0.0.0.0:9999`,
-            ],
+        } else {
+          environment = {
+            ...environment,
+            COORDINATOR_MNEMONIC: relayer.mnemonic,
+            COORDINATOR_LOG_LEVEL: 'debug',
+            ICQ_RUN_COMMAND: 'neutron_query_relayer run',
+            COORDINATOR_CHECKS_PERIOD: 5,
           };
         }
+        services[name] = {
+          image: relayer.image,
+          entrypoint: ['./run.sh'],
+          depends_on: relayer.networks.map(
+            (network) =>
+              `${network}${
+                this.config.networks[network].type === 'ics' ? '_ics' : '_val1'
+              }`,
+          ),
+          volumes: [`${icsNetwork}_ics:/data`],
+          environment: Object.entries({
+            ...environment,
+            ...relayer.environment,
+          }).map(([k, v]) => `${k}=${v}`),
+        };
       }
     }
 
@@ -435,7 +442,7 @@ export class Cosmopark {
 
     fs.writeFileSync(
       this.filename,
-      YAML.stringify(dockerCompose, { indent: 2 }),
+      YAML.stringify(dockerCompose, { indent: 2, lineWidth: -1 }),
     );
   };
 
