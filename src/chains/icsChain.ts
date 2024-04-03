@@ -45,7 +45,6 @@ export class CosmoparkIcsChain implements CosmoparkChain {
 
   async start(wallets: Record<string, CosmoparkWallet>): Promise<void> {
     this.logger.info(`Starting ics chain ${this.network}`);
-    console.log(`Starting ics chain ${this.network}`);
     const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
       process.env.COMPOSE_PROJECT_NAME
     }`;
