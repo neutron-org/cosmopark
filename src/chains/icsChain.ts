@@ -71,7 +71,6 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     this.logger.debug(`Creating wallets for ${this.network}`);
     //add wallets and their balances
 
-    console.log('wallets', wallets);
     for (const [name, wallet] of Object.entries(wallets)) {
       await this.execInNode(
         `echo "${wallet.mnemonic}" | ${this.config.binary} ${this.commands.keysAdd} ${name} --home=/opt --recover --keyring-backend=test`,

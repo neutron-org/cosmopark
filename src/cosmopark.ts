@@ -101,8 +101,6 @@ export class Cosmopark {
       //
     }
     logContext.debug('docker-compose yaml file generated');
-    console.log('relayerWallets');
-    console.log(config.relayers);
     const relayerWallets: Record<string, CosmoparkWallet> =
       config.relayers
         ?.map((relayer) => ({
@@ -350,8 +348,6 @@ export class Cosmopark {
         volumes[name] = null;
         prevConnections.push(...(relayer.connections || []));
       } else if (relayer.type === 'neutron' || relayer.type === 'coordinator') {
-        console.log('query relayer');
-        console.log(relayer);
         let id = 0;
         const icsNetwork = relayer.networks.find(
           (network) => this.config.networks[network].type === 'ics',
@@ -393,6 +389,9 @@ export class Cosmopark {
             this.config.networks[icsNetwork].prefix,
           RELAYER_NEUTRON_CHAIN_KEYRING_BACKEND: 'test',
           RELAYER_TARGET_CHAIN_RPC_ADDR: `tcp://${targetNetwork}_val1:26657`,
+          RELAYER_TARGET_CHAIN_REST_ADDR: `http://${targetNetwork}_val1:1317`,
+          RELAYER_TARGET_CHAIN_DENOM: this.config.networks[targetNetwork].denom,
+          RELAYER_TARGET_CHAIN_GAS_PRICES: `0.5${this.config.networks[targetNetwork].denom}`,
           RELAYER_TARGET_CHAIN_ACCOUNT_PREFIX:
             this.config.networks[targetNetwork].prefix,
           RELAYER_TARGET_CHAIN_VALIDATOR_ACCOUNT_PREFIX: `${this.config.networks[targetNetwork].prefix}valoper`,
@@ -414,16 +413,9 @@ export class Cosmopark {
             COORDINATOR_MNEMONIC: relayer.mnemonic,
             COORDINATOR_LOG_LEVEL: 'debug',
             ICQ_RUN_COMMAND: 'neutron_query_relayer run',
+            COORDINATOR_CHECKS_PERIOD: 5,
           };
         }
-
-        console.log(
-          Object.entries({
-            ...environment,
-            ...relayer.environment,
-          }).map(([k, v]) => `${k}=${v}`),
-        );
-
         services[name] = {
           image: relayer.image,
           entrypoint: ['./run.sh'],
