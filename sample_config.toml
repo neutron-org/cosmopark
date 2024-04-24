@@ -73,7 +73,7 @@ minimum-gas-prices = "0.0025untrn"
 [[relayers]]
 balance = "1000000000"
 binary = "hermes"
-config = { "chains.0.trusting_period" = "14days", "chains.0.unbonding_period" = "504h0m0s" }
+config = { "chains.0.trusting_period" = "14days" }
 connections = [["lsm", "neutron"]]
 image = "hermes"
 log_level = "trace"

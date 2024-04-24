@@ -65,7 +65,6 @@
       "binary": "hermes",
       "config": {
         "chains.0.trusting_period": "14days",
-        "chains.0.unbonding_period": "504h0m0s"
       },
       "connections": [
         [

@@ -171,7 +171,6 @@ const relayersConfig = {
       'chains.0.unbonding_period': '336h0m0s',
       'chains.1.gas_multiplier': 1.2,
       'chains.1.trusting_period': '168h0m0s',
-      'chains.1.unbonding_period': '504h0m0s',
     },
     image: `hermes-test`,
     log_level: 'trace',
@@ -186,7 +185,7 @@ const relayersConfig = {
   },
 };
 ```
-*Please note Cosmopark does NOT support hermes versions `< 1.4.0`*
+*Please note Cosmopark does NOT support hermes versions `< 1.8.0`*
 
 ## Configuration
 
