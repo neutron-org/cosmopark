@@ -15,8 +15,8 @@ const ccvChainConfig = {
   id: '', //chain-id
   rpc_addr: '',
   grpc_addr: '',
-  websocket_addr: '',
   rpc_timeout: '10s',
+  event_source: { mode: 'push', url: '', batch_delay: '500ms' },
   account_prefix: '',
   key_name: '',
   store_prefix: 'ibc',
@@ -37,18 +37,22 @@ const ccvChainConfig = {
     denominator: '3',
   },
   address_type: { derivation: 'cosmos' },
-  unbonding_period: '20days',
   packet_filter: {
     policy: 'allow',
     list: [['*', '*']],
   },
+  ccv_consumer_chain: true,
 };
 
 const standardChainConfig = {
   id: '',
   rpc_addr: '',
   grpc_addr: '',
-  websocket_addr: '',
+  event_source: {
+    mode: 'push',
+    url: '',
+    batch_delay: '500ms',
+  },
   rpc_timeout: '10s',
   account_prefix: '',
   key_name: '',
@@ -65,7 +69,6 @@ const standardChainConfig = {
   clock_drift: '20s',
   max_block_time: '10s',
   trusting_period: '14days',
-  unbonding_period: '504h0m0s',
   trust_threshold: {
     numerator: '1',
     denominator: '3',
@@ -139,7 +142,7 @@ export class CosmoparkHermesRelayer {
   async start(): Promise<void> {
     const tempPath = `${os.tmpdir()}/cosmopark/${this.name}_${
       process.env.COMPOSE_PROJECT_NAME
-    }`;
+    }_hermes`;
     await rimraf(tempPath);
     await fs.mkdir(tempPath, { recursive: true });
     const res = await dockerCompose.run(this.name, 'infinity', {
@@ -194,7 +197,7 @@ export class CosmoparkHermesRelayer {
       chainConfig.id = network.config.chain_id;
       chainConfig.rpc_addr = `http://${nodeKey}:26657`;
       chainConfig.grpc_addr = `http://${nodeKey}:9090`;
-      chainConfig.websocket_addr = `ws://${nodeKey}:26657/websocket`;
+      chainConfig.event_source.url = `ws://${nodeKey}:26657/websocket`;
       chainConfig.account_prefix = network.config.prefix;
       chainConfig.key_name = `key-${network.key}`;
       chainConfig.gas_price.denom = network.config.denom;
