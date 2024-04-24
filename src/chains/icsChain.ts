@@ -51,7 +51,11 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     this.logger.debug(`Removing temp dir: ${tempDir}`);
     await rimraf(tempDir);
     this.logger.debug(`Creating temp dir: ${tempDir}`);
-    await fs.mkdir(tempDir, { recursive: true });
+    try {
+      await fs.mkdir(tempDir, { recursive: true });
+    } catch (e) {
+      // noop
+    }
 
     const res = await dockerCompose.run(`${this.network}_ics`, 'infinity', {
       config: this.filename,

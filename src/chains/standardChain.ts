@@ -55,7 +55,11 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     }`;
     await rimraf(tempDir);
     this.logger.debug(`Creating temp dir: ${tempDir}`);
-    await fs.mkdir(tempDir, { recursive: true });
+    try {
+      await fs.mkdir(tempDir, { recursive: true });
+    } catch (e) {
+      // noop
+    }
 
     for (let i = 0; i < this.config.validators; i++) {
       const res = await dockerCompose.run(
@@ -80,7 +84,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     //generate genesis
     await this.execInAllValidators(
       (n: number) =>
-        `${this.config.binary} ${this.commands.init} val${this.network}${n} --chain-id=${this.config.chain_id} --home=/opt`,
+        `rm -f /opt/config/genesis.json && ${this.config.binary} ${this.commands.init} val${this.network}${n} --chain-id=${this.config.chain_id} --home=/opt`,
     );
     const validatorBalance = this.config.validators_balance;
     //add all validators keys and balances
@@ -130,7 +134,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
           this.config.chain_id
         }`,
     );
-    //collect gentxs
+    //collect gentxs /// TODO: check if it's needed
     await this.execForAllValidatorsContainers(
       `cp $CONTAINER:/opt/config/gentx ${tempDir}/`,
     );
