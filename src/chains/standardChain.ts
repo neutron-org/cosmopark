@@ -88,41 +88,37 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     );
     const validatorBalance = this.config.validators_balance;
     //add all validators keys and balances
-    await Promise.all(
-      new Array(this.config.validators).fill(0).map(async (_, i) => {
-        await this.execInAllValidators(
-          () =>
-            `echo "${mnemonic}" | ${this.config.binary} ${
-              this.commands.keysAdd
-            } val${i + 1} --home=/opt --recover --account=${
-              i + 1
-            } --keyring-backend=test`,
-        );
-        await this.execInAllValidators(
-          () =>
-            `${this.config.binary} ${this.commands.addGenesisAccount} val${
-              i + 1
-            } ${
-              Array.isArray(validatorBalance)
-                ? validatorBalance[i]
-                : validatorBalance
-            }${this.config.denom} --home=/opt --keyring-backend=test`,
-        );
-      }),
-    );
+    for (let i = 0; i < this.config.validators; i++) {
+      await this.execInAllValidators(
+        () =>
+          `echo "${mnemonic}" | ${this.config.binary} ${
+            this.commands.keysAdd
+          } val${i + 1} --home=/opt --recover --account=${
+            i + 1
+          } --keyring-backend=test`,
+      );
+      await this.execInAllValidators(
+        () =>
+          `${this.config.binary} ${this.commands.addGenesisAccount} val${
+            i + 1
+          } ${
+            Array.isArray(validatorBalance)
+              ? validatorBalance[i]
+              : validatorBalance
+          }${this.config.denom} --home=/opt --keyring-backend=test`,
+      );
+    }
     //add wallets and their balances
-    await Promise.all(
-      Object.entries(wallets).map(async ([name, wallet]) => {
-        await this.execInAllValidators(
-          () =>
-            `echo "${wallet.mnemonic}" | ${this.config.binary} ${this.commands.keysAdd} ${name} --home=/opt --recover --keyring-backend=test`,
-        );
-        await this.execInAllValidators(
-          () =>
-            `${this.config.binary} ${this.commands.addGenesisAccount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
-        );
-      }),
-    );
+    for (const [name, wallet] of Object.entries(wallets)) {
+      await this.execInAllValidators(
+        () =>
+          `echo "${wallet.mnemonic}" | ${this.config.binary} ${this.commands.keysAdd} ${name} --home=/opt --recover --keyring-backend=test`,
+      );
+      await this.execInAllValidators(
+        () =>
+          `${this.config.binary} ${this.commands.addGenesisAccount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
+      );
+    }
     //gentx
     await this.execInAllValidators(
       (n: number) =>
