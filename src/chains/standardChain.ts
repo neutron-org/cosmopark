@@ -2,7 +2,7 @@ import dockerCompose, { IDockerComposeResult } from 'docker-compose';
 import { dockerCommand } from 'docker-cli-js';
 import { rimraf } from 'rimraf';
 import toml from '@iarna/toml';
-import { promises as fs } from 'fs';
+import { promises as fs, mkdirSync } from 'fs';
 import _ from 'lodash';
 import { Logger } from 'pino';
 import os from 'os';
@@ -130,6 +130,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
           this.config.chain_id
         }`,
     );
+    await mkdirSync(`${tempDir}/gentx`);
     //collect gentxs /// TODO: check if it's needed
     await this.execForAllValidatorsContainers(
       `cp $CONTAINER:/opt/config/gentx ${tempDir}/`,
@@ -226,6 +227,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   private execForAllValidatorsContainers = async (
     command: string,
   ): Promise<any[]> => {
+    logger.debug(`Executing command for all validators: ${command}`);
     const res = await Promise.all(
       Object.values(this.containers).map((container) =>
         dockerCommand(command.replace('$CONTAINER', container), {
