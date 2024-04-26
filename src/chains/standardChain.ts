@@ -130,6 +130,7 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
           this.config.chain_id
         }`,
     );
+    await rimraf(`${tempDir}/gentx`);
     await mkdirSync(`${tempDir}/gentx`);
     //collect gentxs /// TODO: check if it's needed
     await this.execForAllValidatorsContainers(
