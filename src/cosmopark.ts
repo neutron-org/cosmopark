@@ -15,6 +15,7 @@ import { CosmoparkDefaultChain } from './chains/standardChain';
 import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { logger } from './logger';
 import { getMutexCounter, releaseMutex } from './mutex';
+import { CosmoparkCoordinatorRelayer } from './relayers/coordinator';
 
 export class Cosmopark {
   private context: string;
@@ -23,7 +24,7 @@ export class Cosmopark {
   ports: Record<string, CosmoparkNetworkPortOutput> = {};
   config: CosmoparkConfig;
   networks: Record<string, CosmoparkChain> = {};
-  relayers: CosmoparkHermesRelayer[] = []; //TODO: add relayers type
+  relayers: (CosmoparkHermesRelayer | CosmoparkCoordinatorRelayer)[] = []; //TODO: add relayers type
   constructor(config: CosmoparkConfig) {
     this.config = config;
     this.context = config.context || 'cosmopark';
@@ -148,7 +149,13 @@ export class Cosmopark {
           // nothing to do here
           break;
         case 'coordinator':
-          // nothing to do here
+          instance.relayers.push(
+            new CosmoparkCoordinatorRelayer(
+              `relayer_${relayer.type}${index}`,
+              relayer.type,
+              instance.filename,
+            ),
+          );
           break;
         default:
           throw new Error(`Relayer type ${relayer.type} is not supported`);
@@ -211,19 +218,22 @@ export class Cosmopark {
     throw new Error(`Timeout waiting for first block`);
   };
 
-  async pauseRelayer(type: 'hermes' | 'neutron', index: number): Promise<void> {
+  async pauseRelayer(
+    type: 'hermes' | 'neutron' | 'coordinator',
+    index: number,
+  ): Promise<void> {
     await dockerCompose.pauseOne(`relayer_${type}${index}`);
   }
 
   async resumeRelayer(
-    type: 'hermes' | 'neutron',
+    type: 'hermes' | 'neutron' | 'coordinator',
     index: number,
   ): Promise<void> {
     await dockerCompose.unpauseOne(`relayer_${type}${index}`);
   }
 
   async restartRelayer(
-    type: 'hermes' | 'neutron',
+    type: 'hermes' | 'neutron' | 'coordinator',
     index: number,
   ): Promise<void> {
     await dockerCompose.restartOne(`relayer_${type}${index}`);
