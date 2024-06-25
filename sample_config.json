@@ -2,6 +2,7 @@
   "master_mnemonic": "metal stay delay motion actor cave elite lend because cook sunset echo",
   "context": "some",
   "portOffset": 0,
+  "loglevel": "info",
   "networks": {
     "lsm": {
       "binary": "liquidstakingd",

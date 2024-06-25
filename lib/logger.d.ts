@@ -1,2 +1,2 @@
-declare const logger: import("pino").Logger<import("pino").LoggerOptions | import("pino").DestinationStream>;
+declare const logger: import("pino").Logger<never>;
 export { logger };
