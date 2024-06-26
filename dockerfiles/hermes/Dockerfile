@@ -1,4 +1,4 @@
-FROM ubuntu:23.04
+FROM ubuntu:mantic-20240405
 ARG HERMES_VERSION=v1.4.0
 WORKDIR /app
 RUN apt-get update && apt-get install -y wget && \
