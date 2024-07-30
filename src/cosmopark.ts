@@ -487,7 +487,7 @@ export class Cosmopark {
           throw new Error(`Network:${key} does not have validators_balance`);
         }
         if (Array.isArray(network.validators_balance)) {
-          if (network.validators_balance.length !== network.validators) {
+          if (network.validators_balance.length < network.validators) {
             throw new Error(
               `Network:${key} does not have validators_balance for all validators`,
             );
