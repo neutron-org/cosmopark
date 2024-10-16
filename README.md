@@ -47,6 +47,7 @@ class Cosmopark {
     config: CosmoparkConfig;
     networks: Record<string, CosmoparkChain>;
     relayers: CosmoparkHermesRelayer[];
+    custom_containers: CosmoparkCustomContainer[];
     constructor(config: CosmoparkConfig);
     static create(config: CosmoparkConfig): Promise<Cosmopark>;
     awaitFirstBlock: () => Promise<void>;
@@ -156,6 +157,23 @@ const networksConfigs = {
 }
 ```
 
+## Custom containers
+
+You can run custom containers in your environment. You can have an idea (it's pretty simmilar to docker-compose) of how to configure them from the following type:
+
+```typescript
+
+export type CosmoparkCustomContainer = {
+  name: string;
+  image: string;
+  entrypoint: string;
+  ports: string[];
+  depends_on: string[];
+  volumes: string[];
+};
+
+```
+
 ## Relayers
 
 Cosmopark can run hermes and neutron-query-relayer. You can configure them in the following way:
@@ -185,7 +203,6 @@ const relayersConfig = {
   },
 };
 ```
-*Please note Cosmopark does NOT support hermes versions `< 1.8.0`*
 
 ## Configuration
 
