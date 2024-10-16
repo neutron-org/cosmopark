@@ -15,6 +15,7 @@ export declare class Cosmopark {
     static create(config: CosmoparkConfig): Promise<Cosmopark>;
     awaitFirstBlock: () => Promise<void>;
     pauseRelayer(type: 'hermes' | 'neutron' | 'coordinator', index: number): Promise<void>;
+    stopRelayer(type: 'hermes' | 'neutron' | 'coordinator', index: number): Promise<void>;
     resumeRelayer(type: 'hermes' | 'neutron' | 'coordinator', index: number): Promise<void>;
     restartRelayer(type: 'hermes' | 'neutron' | 'coordinator', index: number): Promise<void>;
     pauseNetwork(network: string): Promise<void>;

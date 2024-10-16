@@ -225,6 +225,13 @@ export class Cosmopark {
     await dockerCompose.pauseOne(`relayer_${type}${index}`);
   }
 
+  async stopRelayer(
+    type: 'hermes' | 'neutron' | 'coordinator',
+    index: number,
+  ): Promise<void> {
+    await dockerCompose.stopOne(`relayer_${type}${index}`);
+  }
+
   async resumeRelayer(
     type: 'hermes' | 'neutron' | 'coordinator',
     index: number,
@@ -440,6 +447,18 @@ export class Cosmopark {
             ...environment,
             ...relayer.environment,
           }).map(([k, v]) => `${k}=${v}`),
+        };
+      }
+    }
+
+    if (this.config.custom_containers) {
+      for (const container of this.config.custom_containers) {
+        services[container.name] = {
+          image: container.image,
+          entrypoint: container.entrypoint.split(' '),
+          ports: container.ports,
+          depends_on: container.depends_on,
+          volumes: container.volumes,
         };
       }
     }

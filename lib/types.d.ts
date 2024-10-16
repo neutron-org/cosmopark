@@ -59,6 +59,15 @@ export type CosmoparkConfig = {
     wallets?: {
         [key: string]: CosmoparkWallet;
     };
+    custom_containers?: CosmoparkCustomContainer[];
+};
+export type CosmoparkCustomContainer = {
+    name: string;
+    image: string;
+    entrypoint: string;
+    ports: string[];
+    depends_on: string[];
+    volumes: string[];
 };
 export interface CosmoparkChain {
     execInSomewhere(command: string): Promise<IDockerComposeResult>;
