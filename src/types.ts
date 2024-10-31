@@ -35,6 +35,7 @@ export type CosmoparkNetworkConfig = {
   post_init?: string[];
   post_start?: string[];
   commands?: Record<string, string>;
+  deploy?: any;
 };
 
 export type CosmoparkRelayer = {

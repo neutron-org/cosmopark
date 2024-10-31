@@ -308,6 +308,7 @@ export class Cosmopark {
                 `${service_interface}${restPort}:1317`,
                 `${service_interface}${grpcPort}:9090`,
               ],
+              deploy: network.deploy || {},
             };
             volumes[name] = null;
           }
@@ -340,6 +341,7 @@ export class Cosmopark {
                   }:9090`,
                 ],
               }),
+              deploy: network.deploy || {},
             };
             volumes[name] = null;
           }
