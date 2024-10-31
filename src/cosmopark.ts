@@ -16,6 +16,7 @@ import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { logger } from './logger';
 import { getMutexCounter, releaseMutex } from './mutex';
 import { CosmoparkCoordinatorRelayer } from './relayers/coordinator';
+import { log } from 'console';
 
 export class Cosmopark {
   private context: string;
@@ -287,6 +288,7 @@ export class Cosmopark {
         rest: restPort,
         grpc: grpcPort,
       };
+      logger.debug('generate docker-compose for network %o', network);
       switch (network.type) {
         case 'ics':
           {
@@ -308,7 +310,6 @@ export class Cosmopark {
                 `${service_interface}${restPort}:1317`,
                 `${service_interface}${grpcPort}:9090`,
               ],
-              deploy: network.deploy || {},
             };
             volumes[name] = null;
           }
@@ -341,7 +342,6 @@ export class Cosmopark {
                   }:9090`,
                 ],
               }),
-              deploy: network.deploy ? network.deploy : {},
             };
             volumes[name] = null;
           }
@@ -470,10 +470,14 @@ export class Cosmopark {
       services,
       volumes,
     };
-
+    logger.debug('docker-compose %o', dockerCompose);
     fs.writeFileSync(
       this.filename,
-      YAML.stringify(dockerCompose, { indent: 2, lineWidth: -1 }),
+      YAML.stringify(dockerCompose, {
+        indent: 2,
+        lineWidth: -1,
+        aliasDuplicateObjects: false,
+      }),
     );
   };
 
