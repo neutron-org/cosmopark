@@ -341,7 +341,7 @@ export class Cosmopark {
                   }:9090`,
                 ],
               }),
-              deploy: network.deploy || {},
+              deploy: network.deploy ? network.deploy : {},
             };
             volumes[name] = null;
           }
