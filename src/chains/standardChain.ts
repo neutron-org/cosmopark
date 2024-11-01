@@ -49,10 +49,12 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     mnemonic: string,
   ): Promise<void> {
     this.logger.info(`Starting default chain ${this.network}`);
-    this.logger.debug(`Removing temp dir: ${os.tmpdir()}/cosmopark`);
+    this.logger.debug(
+      `Removing temp dir: ${os.tmpdir()}/cosmopark/${this.type}`,
+    );
     const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
       process.env.COMPOSE_PROJECT_NAME
-    }`;
+    }/${this.type}`;
     await rimraf(tempDir);
     this.logger.debug(`Creating temp dir: ${tempDir}`);
     try {

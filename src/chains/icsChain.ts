@@ -47,7 +47,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
     this.logger.info(`Starting ics chain ${this.network}`);
     const tempDir = `${os.tmpdir()}/cosmopark/${this.network}_${
       process.env.COMPOSE_PROJECT_NAME
-    }`;
+    }/${this.type}`;
     this.logger.debug(`Removing temp dir: ${tempDir}`);
     await rimraf(tempDir);
     this.logger.debug(`Creating temp dir: ${tempDir}`);
