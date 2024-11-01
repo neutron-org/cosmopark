@@ -32,7 +32,7 @@ export class CosmoparkIcsChain implements CosmoparkChain {
   };
 
   constructor(name: string, config: CosmoparkNetworkConfig, filename: string) {
-    this.type = config.type;
+    this.type = 'ics';
     this.config = config;
     this.network = name;
     this.filename = filename;
