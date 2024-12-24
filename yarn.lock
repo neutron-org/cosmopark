@@ -535,10 +535,10 @@ docker-cli-js@^2.10.0:
     lodash.snakecase "^4.1.1"
     nodeify-ts "1.0.6"
 
-docker-compose@^0.24.2:
-  version "0.24.2"
-  resolved "https://registry.yarnpkg.com/docker-compose/-/docker-compose-0.24.2.tgz#172027153b6c16239d5457fe48f56c7803f42c9d"
-  integrity sha512-2/WLvA7UZ6A2LDLQrYW0idKipmNBWhtfvrn2yzjC5PnHDzuFVj1zAZN6MJxVMKP0zZH8uzAK6OwVZYHGuyCmTw==
+docker-compose@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/docker-compose/-/docker-compose-1.1.0.tgz#ccc21b280430357e51e192e29dc7b4cef81f3784"
+  integrity sha512-VrkQJNafPQ5d6bGULW0P6KqcxSkv3ZU5Wn2wQA19oB71o7+55vQ9ogFe2MMeNbK+jc9rrKVy280DnHO5JLMWOQ==
   dependencies:
     yaml "^2.2.2"
 
