@@ -16,7 +16,6 @@ import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { logger } from './logger';
 import { getMutexCounter, releaseMutex } from './mutex';
 import { CosmoparkCoordinatorRelayer } from './relayers/coordinator';
-import { log } from 'console';
 
 export class Cosmopark {
   private context: string;
