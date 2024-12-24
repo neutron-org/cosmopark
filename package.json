@@ -1,6 +1,6 @@
 {
   "name": "@neutron-org/cosmopark",
-  "version": "1.7.12",
+  "version": "1.7.13",
   "description": "Start and interact with your cosmos park",
   "main": "./lib/index.js",
   "license": "MIT",
@@ -21,7 +21,7 @@
     "@iarna/toml": "^2.2.5",
     "commander": "^11.0.0",
     "docker-cli-js": "^2.10.0",
-    "docker-compose": "^0.24.2",
+    "docker-compose": "1.1.0",
     "lodash": "^4.17.21",
     "pino": "^8.17.2",
     "rimraf": "^5.0.7",
