@@ -233,12 +233,11 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
   ): Promise<any[]> => {
     logger.debug(`Executing command for all validators: ${command}`);
     const res = await Promise.all(
-      Object.values(this.containers).map((_, i) => {
-        const name = `${this.network}_val${i + 1}`;
-        return dockerCommand(command.replace('$CONTAINER', name), {
+      Object.values(this.containers).map((container) =>
+        dockerCommand(command.replace('$CONTAINER', container), {
           echo: false,
-        });
-      }),
+        }),
+      ),
     );
     this.logger.debug(res, `exec result for all validators`);
     return res;
