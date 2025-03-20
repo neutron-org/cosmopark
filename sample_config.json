@@ -1,63 +1,118 @@
 {
-  "master_mnemonic": "metal stay delay motion actor cave elite lend because cook sunset echo",
-  "context": "some",
-  "portOffset": 0,
-  "loglevel": "info",
+  "context": "pump",
   "networks": {
-    "lsm": {
-      "binary": "liquidstakingd",
-      "chain_id": "testlsm",
+    "neutron": {
+      "binary": "neutrond",
+      "chain_id": "ntrntest",
+      "denom": "untrn",
+      "image": "neutron-test:1.0.9",
+      "prefix": "neutron",
+      "loglevel": "debug",
+      "trace": true,
+      "public": true,
+      "type": "ics",
+      "upload": [
+        "./artifacts/contracts",
+        "./artifacts/contracts_thirdparty",
+        "./artifacts/scripts/init-neutrond.sh"
+      ],
+      "post_init": [
+        "CHAINID=ntrntest CHAIN_DIR=/opt /opt/init-neutrond.sh"
+      ],
+      "genesis_opts": {
+        "app_state.crisis.constant_fee.denom": "untrn"
+      },
+      "config_opts": {
+        "consensus.timeout_commit": "500ms",
+        "consensus.timeout_propose": "500ms"
+      },
+      "app_opts": {
+        "api.enable": "true",
+        "api.address": "tcp://0.0.0.0:1317",
+        "api.swagger": "true",
+        "grpc.enable": "true",
+        "grpc.address": "0.0.0.0:9090",
+        "minimum-gas-prices": "0.0025untrn",
+        "rosetta.enable": "true",
+        "telemetry.prometheus-retention-time": 1000
+      }
+    },
+    "gaia": {
+      "binary": "gaiad",
+      "chain_id": "testgaia",
       "denom": "stake",
-      "image": "lsm",
+      "image": "gaia-test:1.0.9",
       "prefix": "cosmos",
-      "validators": 1,
-      "validators_balance": "1000000000",
+      "trace": true,
+      "validators": 2,
+      "commands": {
+        "addGenesisAccount": "genesis add-genesis-account",
+        "gentx": "genesis gentx",
+        "collectGenTx": "genesis collect-gentxs"
+      },
+      "validators_balance": [
+        "1900000000",
+        "100000000",
+        "100000000",
+        "100000000",
+        "100000000"
+      ],
       "genesis_opts": {
         "app_state.slashing.params.downtime_jail_duration": "10s",
         "app_state.slashing.params.signed_blocks_window": "10",
-        "app_state.staking.params.validator_bond_factor": "10"
+        "app_state.slashing.params.min_signed_per_window": "0.9",
+        "app_state.slashing.params.slash_fraction_downtime": "0.1",
+        "app_state.staking.params.validator_bond_factor": "10",
+        "app_state.staking.params.unbonding_time": "1814400s",
+        "app_state.mint.minter.inflation": "0.9",
+        "app_state.mint.params.inflation_max": "0.95",
+        "app_state.mint.params.inflation_min": "0.5",
+        "app_state.interchainaccounts.host_genesis_state.params.allow_messages": [
+          "*"
+        ]
       },
       "config_opts": {
         "rpc.laddr": "tcp://0.0.0.0:26657"
       },
       "app_opts": {
         "api.enable": true,
+        "api.address": "tcp://0.0.0.0:1317",
         "api.swagger": true,
         "grpc.enable": true,
+        "grpc.address": "0.0.0.0:9090",
         "minimum-gas-prices": "0stake",
         "rosetta.enable": true
-      }
-    },
-    "neutron": {
-      "binary": "neutrond",
-      "chain_id": "nnn",
-      "denom": "untrn",
-      "image": "neutron-node",
-      "prefix": "neutron",
-      "type": "ics",
+      },
       "upload": [
-        "./contracts",
-        "./contracts_thirdparty",
-        "./init-neutrond.sh"
+        "./artifacts/scripts/init-gaia.sh"
       ],
-      "post_init": [
-        "CHAINID=nnn CHAIN_DIR=/opt /opt/init-neutrond.sh"
-      ],
-      "genesis_opts": {
-        "app_state.crisis.constant_fee.denom": "untrn"
-      },
-      "config_opts": {
-        "consensus.timeout_commit": "1s",
-        "consensus.timeout_propose": "1s"
-      },
-      "app_opts": {
-        "api.enable": "true",
-        "api.swagger": "true",
-        "grpc.enable": "true",
-        "minimum-gas-prices": "0.0025untrn",
-        "rosetta.enable": "true",
-        "telemetry.prometheus-retention-time": 1000
-      }
+      "post_start": [
+        "/opt/init-gaia.sh > /opt/init-gaia.log 2>&1"
+      ]
+    }
+  },
+  "master_mnemonic": "defy will armed december waste fetch acquire arrive village person immense fiber",
+  "loglevel": "trace",
+  "wallets": {
+    "demowallet1": {
+      "mnemonic": "approve plunge trick ceiling beauty multiply time exist extend adjust bounce remember",
+      "balance": "1000000000"
+    },
+    "demowallet2": {
+      "mnemonic": "drive pass execute skirt avocado loan pudding hobby wonder error million pull",
+      "balance": "1000000000"
+    },
+    "demo1": {
+      "mnemonic": "entry festival hand clarify cinnamon network boost income one divorce giraffe work",
+      "balance": "1000000000"
+    },
+    "demo2": {
+      "mnemonic": "art choice work viable expect skin want police mad person pulse column",
+      "balance": "1000000000"
+    },
+    "demo3": {
+      "mnemonic": "winter busy common meadow gallery chief vehicle dune electric giant repeat nephew",
+      "balance": "1000000000"
     }
   },
   "relayers": [
@@ -65,52 +120,25 @@
       "balance": "1000000000",
       "binary": "hermes",
       "config": {
-        "chains.0.trusting_period": "14days",
+        "chains.0.gas_multiplier": 1.8,
+        "chains.0.trusting_period": "112h0m0s",
+        "chains.1.gas_multiplier": 1.8,
+        "chains.1.trusting_period": "168h0m0s"
       },
-      "connections": [
-        [
-          "lsm",
-          "neutron"
-        ]
-      ],
-      "image": "hermes",
+      "image": "hermes-test:1.0.9",
       "log_level": "trace",
-      "mnemonic": "laptop shy priority detect under sorry visit badge crew remind aware plate adapt eager taste",
-      "networks": [
-        "lsm",
-        "neutron"
-      ],
-      "type": "hermes"
-    },
-    {
-      "balance": "1000000000",
-      "binary": "neutron-query-relayer",
-      "image": "neutron-org/neutron-query-relayer",
-      "log_level": "info",
-      "mnemonic": "ignore voyage dinner grit ramp list obvious couple crunch ability fork chef eight normal street fancy cycle hidden smile give tourist joy spin possible",
+      "type": "hermes",
       "networks": [
         "neutron",
-        "lsm"
+        "gaia"
       ],
-      "type": "neutron"
+      "connections": [
+        [
+          "neutron",
+          "gaia"
+        ]
+      ],
+      "mnemonic": "travel case rice slide soul old stairs cement symbol deliver foam mirror"
     }
-  ],
-  "wallets": {
-    "demowallet1": {
-      "balance": "1000000000",
-      "mnemonic": "solve column paper kit clever electric laundry announce despair sister bring find bachelor enact two another tissue actor day punch orbit orbit math cave"
-    },
-    "demo1": {
-      "balance": "1000000000",
-      "mnemonic": "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass"
-    },
-    "demo2": {
-      "balance": "1000000000",
-      "mnemonic": "veteran try aware erosion drink dance decade comic dawn museum release episode original list ability owner size tuition surface ceiling depth seminar capable only"
-    },
-    "demo3": {
-      "balance": "1000000000",
-      "mnemonic": "metal stay delay motion actor cave elite lend because cook sunset echo"
-    }
-  }
+  ]
 }
