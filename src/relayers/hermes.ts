@@ -11,39 +11,6 @@ import os from 'os';
 import _ from 'lodash';
 import { rimraf } from 'rimraf';
 
-const ccvChainConfig = {
-  id: '', //chain-id
-  rpc_addr: '',
-  grpc_addr: '',
-  rpc_timeout: '10s',
-  event_source: { mode: 'push', url: '', batch_delay: '500ms' },
-  account_prefix: '',
-  key_name: '',
-  store_prefix: 'ibc',
-  default_gas: 3000000,
-  max_gas: 5000000,
-  gas_price: {
-    price: 0.005,
-    denom: '',
-  },
-  gas_multiplier: 1.1,
-  max_msg_num: 20,
-  max_tx_size: 180000,
-  clock_drift: '15s',
-  max_block_time: '30s',
-  trusting_period: '320hours',
-  trust_threshold: {
-    numerator: '1',
-    denominator: '3',
-  },
-  address_type: { derivation: 'cosmos' },
-  packet_filter: {
-    policy: 'allow',
-    list: [['*', '*']],
-  },
-  ccv_consumer_chain: true,
-};
-
 const standardChainConfig = {
   id: '',
   rpc_addr: '',
@@ -183,17 +150,8 @@ export class CosmoparkHermesRelayer {
       networks.push({ key: network, config: this.networksConfig[network] });
     }
     for (const network of networks) {
-      let chainConfig;
-      let nodeKey;
-      switch (network.config.type) {
-        case 'ics':
-          chainConfig = _.cloneDeep(ccvChainConfig);
-          nodeKey = `${network.key}_ics`;
-          break;
-        default:
-          chainConfig = _.cloneDeep(standardChainConfig);
-          nodeKey = `${network.key}_val1`;
-      }
+      const chainConfig = _.cloneDeep(standardChainConfig);
+      const nodeKey = `${network.key}_val1`;
       chainConfig.id = network.config.chain_id;
       chainConfig.rpc_addr = `http://${nodeKey}:26657`;
       chainConfig.grpc_addr = `http://${nodeKey}:9090`;
