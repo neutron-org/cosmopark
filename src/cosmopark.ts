@@ -337,7 +337,7 @@ export class Cosmopark {
         }
 
         let environment: Record<string, string | number | boolean> = {
-          NODE: `${neutronNetwork}_val`,
+          NODE: `${neutronNetwork}_val1`,
           LOGGER_LEVEL: relayer.log_level,
           RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX:
             this.config.networks[neutronNetwork].prefix,
