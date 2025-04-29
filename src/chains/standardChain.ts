@@ -211,8 +211,8 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     //upload files
     if (this.config.upload) {
       for (const path of this.config.upload) {
-        await dockerCommand(
-          `cp ${path} ${this.containers[`${this.network}_val1`]}:/opt/`,
+        await this.execForAllValidatorsContainers(
+          `cp ${path} $CONTAINER:/opt/`,
         );
       }
     }
@@ -220,7 +220,9 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
     //exec post init commands
     if (this.config.post_init) {
       for (const command of this.config.post_init) {
-        await this.execInValidator(`${this.network}_val1`, command);
+        await this.execInAllValidators(
+          () => command,
+        );
       }
     }
 
