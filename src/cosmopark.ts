@@ -10,7 +10,6 @@ import {
   CosmoparkNetworkPortOutput,
   CosmoparkWallet,
 } from './types';
-import { CosmoparkIcsChain } from './chains/icsChain';
 import { CosmoparkDefaultChain } from './chains/standardChain';
 import { CosmoparkHermesRelayer } from './relayers/hermes';
 import { logger } from './logger';
@@ -110,27 +109,14 @@ export class Cosmopark {
         }))
         .reduce((a, c, idx) => ({ ...a, [`relayer_${idx}`]: c }), {}) || {};
     for (const [key, network] of Object.entries(config.networks)) {
-      switch (network.type) {
-        case 'ics':
-          logContext.debug('create ics chain');
-          instance.networks[key] = await CosmoparkIcsChain.create(
-            key,
-            network,
-            { ...config.wallets, ...relayerWallets },
-            instance.filename,
-          );
-          break;
-        default:
-          logContext.debug('create default chain');
-          instance.networks[key] = await CosmoparkDefaultChain.create(
-            key,
-            network,
-            { ...config.wallets, ...relayerWallets },
-            config.master_mnemonic,
-            instance.filename,
-          );
-          break;
-      }
+      logContext.debug('create default chain');
+      instance.networks[key] = await CosmoparkDefaultChain.create(
+        key,
+        network,
+        { ...config.wallets, ...relayerWallets },
+        config.master_mnemonic,
+        instance.filename,
+      );
     }
     for (const [index, relayer] of Object.entries(config.relayers || [])) {
       switch (relayer.type) {
@@ -247,12 +233,8 @@ export class Cosmopark {
   }
 
   async pauseNetwork(network: string): Promise<void> {
-    if (this.networks[network].type === 'ics') {
-      await dockerCompose.pauseOne(`${network}_ics`);
-    } else {
-      for (let i = 0; i++; i < this.networks[network].config.validators) {
-        await dockerCompose.pauseOne(`${network}_val${i + 1}`);
-      }
+    for (let i = 0; i++; i < this.networks[network].config.validators) {
+      await dockerCompose.pauseOne(`${network}_val${i + 1}`);
     }
   }
 
@@ -288,62 +270,31 @@ export class Cosmopark {
         grpc: grpcPort,
       };
       logger.debug('generate docker-compose for network %o', network);
-      switch (network.type) {
-        case 'ics':
-          {
-            const name = `${key}_ics`;
-            services[name] = {
-              image: network.image,
-              command: [
-                'start',
-                `--home=/opt`,
-                `--pruning=nothing`,
-                `--log_format=json`,
-                `--log_level=${network.loglevel || 'info'}`,
-                ...(network.trace ? ['--trace'] : []),
-              ],
-              entrypoint: [network.binary],
-              volumes: [`${name}:/opt`],
-              ports: [
-                `${service_interface}${rpcPort}:26657`,
-                `${service_interface}${restPort}:1317`,
-                `${service_interface}${grpcPort}:9090`,
-              ],
-            };
-            volumes[name] = null;
-          }
-          break;
-        default:
-          for (let i = 0; i < network.validators; i++) {
-            const name = `${key}_val${i + 1}`;
-            services[name] = {
-              image: network.image,
-              command: [
-                'start',
-                `--home=/opt`,
-                `--log_level=debug`,
-                `--pruning=nothing`,
-                `--log_format=${network.loglevel || 'info'}`,
-                ...(network.trace ? ['--trace'] : []),
-              ],
-              entrypoint: [network.binary],
-              volumes: [`${name}:/opt`],
-              ...(i === 0 && {
-                ports: [
-                  `${service_interface}${
-                    portOffset + networkCounter + 26657
-                  }:26657`,
-                  `${service_interface}${
-                    portOffset + networkCounter + 1317
-                  }:1317`,
-                  `${service_interface}${
-                    portOffset + networkCounter + 9090
-                  }:9090`,
-                ],
-              }),
-            };
-            volumes[name] = null;
-          }
+      for (let i = 0; i < network.validators; i++) {
+        const name = `${key}_val${i + 1}`;
+        services[name] = {
+          image: network.image,
+          command: [
+            'start',
+            `--home=/opt`,
+            `--log_level=debug`,
+            `--pruning=nothing`,
+            `--log_format=${network.loglevel || 'info'}`,
+            ...(network.trace ? ['--trace'] : []),
+          ],
+          entrypoint: [network.binary],
+          volumes: [`${name}:/opt`],
+          ...(i === 0 && {
+            ports: [
+              `${service_interface}${
+                portOffset + networkCounter + 26657
+              }:26657`,
+              `${service_interface}${portOffset + networkCounter + 1317}:1317`,
+              `${service_interface}${portOffset + networkCounter + 9090}:9090`,
+            ],
+          }),
+        };
+        volumes[name] = null;
       }
       networkCounter++;
     }
@@ -356,55 +307,53 @@ export class Cosmopark {
           command: ['-c', `/root/start.sh`],
           volumes: [`${name}:/root`],
           entrypoint: ['/bin/bash'],
-          depends_on: relayer.networks.map(
-            (network) =>
-              `${network}${
-                this.config.networks[network].type === 'ics' ? '_ics' : '_val1'
-              }`,
-          ),
+          depends_on: relayer.networks.map((network) => `${network}_val1`),
         };
         volumes[name] = null;
         prevConnections.push(...(relayer.connections || []));
       } else if (relayer.type === 'neutron' || relayer.type === 'coordinator') {
         let id = 0;
-        const icsNetwork = relayer.networks.find(
-          (network) => this.config.networks[network].type === 'ics',
+        const neutronNetwork = relayer.networks.find(
+          (network) => this.config.networks[network].prefix === 'neutron',
         );
         const targetNetwork = relayer.networks.find(
-          (network) => this.config.networks[network].type !== 'ics',
+          (network) => this.config.networks[network].prefix !== 'neutron',
         );
         for (const [network1, network2] of prevConnections) {
           if (
-            (network1 === icsNetwork && network2 === targetNetwork) ||
-            (network2 === icsNetwork && network1 === targetNetwork)
+            (network1 === neutronNetwork && network2 === targetNetwork) ||
+            (network2 === neutronNetwork && network1 === targetNetwork)
           ) {
             break;
           }
-          if (network1 === icsNetwork || network2 === icsNetwork) {
+          if (network1 === neutronNetwork || network2 === neutronNetwork) {
             id++;
           }
         }
-        if (!icsNetwork || !targetNetwork) {
+        if (!neutronNetwork || !targetNetwork) {
           throw new Error(
-            `Relayer:${relayer.type} should be linked to 2 networks (1 ics and 1 default)`,
+            `Relayer:${relayer.type} should be linked to 2 networks (1 neutron and 1 default)`,
           );
         }
 
         let environment: Record<string, string | number | boolean> = {
-          NODE: `${icsNetwork}_ics`,
+          NODE: `${neutronNetwork}_val1`,
           LOGGER_LEVEL: relayer.log_level,
           RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX:
-            this.config.networks[icsNetwork].prefix,
-          RELAYER_NEUTRON_CHAIN_RPC_ADDR: `tcp://${icsNetwork}_ics:26657`,
-          RELAYER_NEUTRON_CHAIN_REST_ADDR: `http://${icsNetwork}_ics:1317`,
+            this.config.networks[neutronNetwork].prefix,
+          RELAYER_NEUTRON_CHAIN_RPC_ADDR: `tcp://${neutronNetwork}_val1:26657`,
+          RELAYER_NEUTRON_CHAIN_REST_ADDR: `http://${neutronNetwork}_val1:1317`,
           RELAYER_NEUTRON_CHAIN_HOME_DIR: '/data',
           RELAYER_NEUTRON_CHAIN_SIGN_KEY_NAME: `relayer_${index}`,
-          RELAYER_NEUTRON_CHAIN_GAS_PRICES: `0.5${this.config.networks[icsNetwork].denom}`,
+          RELAYER_NEUTRON_CHAIN_GAS_PRICES: `0.5${this.config.networks[neutronNetwork].denom}`,
           RELAYER_NEUTRON_CHAIN_GAS_ADJUSTMENT: 1.5,
+          RELAYER_NEUTRON_CHAIN_DENOM:'untrn',
+          RELAYER_NEUTRON_CHAIN_MAX_GAS_PRICE: 1000,
+          RELAYER_NEUTRON_CHAIN_GAS_PRICE_MULTIPLIER: 1.1,
           RELAYER_NEUTRON_CHAIN_CONNECTION_ID: `connection-${id}`,
           RELAYER_NEUTRON_CHAIN_DEBUG: true,
           RELAYER_NEUTRON_CHAIN_ACCOUNT_PREFIX:
-            this.config.networks[icsNetwork].prefix,
+            this.config.networks[neutronNetwork].prefix,
           RELAYER_NEUTRON_CHAIN_KEYRING_BACKEND: 'test',
           RELAYER_TARGET_CHAIN_RPC_ADDR: `tcp://${targetNetwork}_val1:26657`,
           RELAYER_TARGET_CHAIN_REST_ADDR: `http://${targetNetwork}_val1:1317`,
@@ -437,13 +386,8 @@ export class Cosmopark {
         services[name] = {
           image: relayer.image,
           entrypoint: ['./run.sh'],
-          depends_on: relayer.networks.map(
-            (network) =>
-              `${network}${
-                this.config.networks[network].type === 'ics' ? '_ics' : '_val1'
-              }`,
-          ),
-          volumes: [`${icsNetwork}_ics:/data`],
+          depends_on: relayer.networks.map((network) => `${network}_val1`),
+          volumes: [`${neutronNetwork}_val1:/data`],
           environment: Object.entries({
             ...environment,
             ...relayer.environment,
@@ -506,27 +450,25 @@ export class Cosmopark {
     }
 
     for (const [key, network] of Object.entries(config.networks)) {
-      if (network.type !== 'ics') {
-        if (!network.validators_balance) {
-          throw new Error(`Network:${key} does not have validators_balance`);
+      if (!network.validators_balance) {
+        throw new Error(`Network:${key} does not have validators_balance`);
+      }
+      if (Array.isArray(network.validators_balance)) {
+        if (network.validators_balance.length < network.validators) {
+          throw new Error(
+            `Network:${key} does not have validators_balance for all validators`,
+          );
         }
-        if (Array.isArray(network.validators_balance)) {
-          if (network.validators_balance.length < network.validators) {
-            throw new Error(
-              `Network:${key} does not have validators_balance for all validators`,
-            );
-          }
-        } else {
-          if (
-            typeof network.validators_balance !== 'string' ||
-            !network.validators_balance.match(/^[0-9]+$/)
-          ) {
-            throw new Error(`Network:${key} validators_balance if wrong type`);
-          }
+      } else {
+        if (
+          typeof network.validators_balance !== 'string' ||
+          !network.validators_balance.match(/^[0-9]+$/)
+        ) {
+          throw new Error(`Network:${key} validators_balance if wrong type`);
         }
-        if (!network.validators) {
-          throw new Error(`Network:${key} does not have validators number`);
-        }
+      }
+      if (!network.validators) {
+        throw new Error(`Network:${key} does not have validators number`);
       }
     }
 
