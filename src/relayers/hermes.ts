@@ -133,6 +133,23 @@ export class CosmoparkHermesRelayer {
         ),
       ),
     );
+
+    //upload files
+    if (this.config.upload) {
+      for (const path of this.config.upload) {
+        await this.execForContainer(
+          `cp ${path} $CONTAINER:/root/`,
+        );
+      }
+    }
+
+    //exec post init commands
+    if (this.config.post_init) {
+      for (const command of this.config.post_init) {
+        await this.execInNode(command);
+      }
+    }
+
     const starter = this.prepareStarter();
     await fs.writeFile(`${tempPath}/start.sh`, starter, { mode: 0o755 });
     await this.execForContainer(

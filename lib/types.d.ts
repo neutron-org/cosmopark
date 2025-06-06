@@ -12,6 +12,7 @@ export type CosmoparkNetworkConfig = {
     validators?: number;
     type?: CosmoparkNetworkTypes;
     validators_balance?: string[] | string;
+    validators_stake?: string[] | string;
     loglevel?: string;
     trace?: boolean;
     public?: boolean;
@@ -40,6 +41,8 @@ export type CosmoparkRelayer = {
     config?: any;
     mnemonic: string;
     balance?: string;
+    upload?: string[];
+    post_init?: string[];
 };
 export type CosmoparkRelayerTypes = 'hermes' | 'default' | 'neutron' | 'coordinator';
 export type CosmoparkWallet = {

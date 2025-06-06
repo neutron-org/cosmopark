@@ -122,13 +122,14 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
           `${this.config.binary} ${this.commands.addGenesisAccount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
       );
     }
+    const validatorsStake = this.config.validators_stake;
     //gentx
     await this.execInAllValidators(
       (n: number) =>
         `${this.config.binary} ${this.commands.gentx} val${n + 1} ${
-          Array.isArray(validatorBalance)
-            ? validatorBalance[n]
-            : validatorBalance
+          Array.isArray(validatorsStake)
+            ? validatorsStake[n]
+            : validatorsStake
         }${this.config.denom} --home=/opt --keyring-backend=test --chain-id=${
           this.config.chain_id
         }`,
