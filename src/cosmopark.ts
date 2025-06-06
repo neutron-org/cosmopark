@@ -277,9 +277,9 @@ export class Cosmopark {
           command: [
             'start',
             `--home=/opt`,
-            `--log_level=debug`,
+            `--log_format=json`,
             `--pruning=nothing`,
-            `--log_format=${network.loglevel || 'info'}`,
+            `--log_level=${network.loglevel || 'info'}`,
             ...(network.trace ? ['--trace'] : []),
           ],
           entrypoint: [network.binary],
