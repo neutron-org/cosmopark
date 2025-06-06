@@ -133,6 +133,39 @@ export class CosmoparkHermesRelayer {
         ),
       ),
     );
+
+    await Promise.all(
+      this.config.connections.map(([network1, network2]) =>
+        this.execInNode(
+          `while ! ${this.config.binary} create connection --a-chain ${this.networksConfig[network1].chain_id} --b-chain ${this.networksConfig[network2].chain_id}; do sleep 1; done;`
+        ),
+      ),
+    );
+
+    //upload files
+    if (this.config.upload) {
+      for (const path of this.config.upload) {
+        await this.execForContainer(
+          `cp ${path} $CONTAINER:/root/`,
+        );
+      }
+    }
+
+    //exec post init commands
+    if (this.config.post_init) {
+      for (const command of this.config.post_init) {
+        await this.execInNode(command);
+      }
+    }
+
+    await Promise.all(
+      this.config.connections.map(([network1, _]) =>
+        this.execInNode(
+          `while ! ${this.config.binary} create channel --a-chain ${this.networksConfig[network1].chain_id} --a-connection connection-0 --a-port transfer --b-port transfer; do sleep 5; done;`
+        ),
+      ),
+    );
+
     const starter = this.prepareStarter();
     await fs.writeFile(`${tempPath}/start.sh`, starter, { mode: 0o755 });
     await this.execForContainer(
@@ -169,12 +202,6 @@ export class CosmoparkHermesRelayer {
 
   private prepareStarter() {
     let out = `#!/bin/bash\n`;
-    for (const [network1, network2] of this.config.connections || []) {
-      out += `while ! echo "y" | ${this.config.binary} create channel --a-chain ${this.networksConfig[network1].chain_id} --b-chain ${this.networksConfig[network2].chain_id} --a-port transfer --b-port transfer --yes --new-client-connection; do
-sleep 5
-done
-`;
-    }
     out += 'hermes start';
     return out;
   }
