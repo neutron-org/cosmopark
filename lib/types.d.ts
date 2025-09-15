@@ -3,6 +3,10 @@ import { Logger } from 'pino';
 export type CosmoparkNetworkTypes = 'ics' | 'default';
 export type CosmoparkNetworkPortType = 'rpc' | 'grpc' | 'rest';
 export type CosmoparkNetworkPortOutput = Record<CosmoparkNetworkPortType, number>;
+export type CosmoparkAccount = {
+    address: string;
+    balance: string;
+};
 export type CosmoparkNetworkConfig = {
     image: string;
     denom: string;
@@ -12,6 +16,9 @@ export type CosmoparkNetworkConfig = {
     validators?: number;
     type?: CosmoparkNetworkTypes;
     validators_balance?: string[] | string;
+    validators_stake?: string[] | string;
+    oracle_addresses?: string[] | string;
+    accounts?: CosmoparkAccount[];
     loglevel?: string;
     trace?: boolean;
     public?: boolean;
@@ -40,6 +47,8 @@ export type CosmoparkRelayer = {
     config?: any;
     mnemonic: string;
     balance?: string;
+    upload?: string[];
+    post_init?: string[];
 };
 export type CosmoparkRelayerTypes = 'hermes' | 'default' | 'neutron' | 'coordinator';
 export type CosmoparkWallet = {

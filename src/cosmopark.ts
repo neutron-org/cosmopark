@@ -277,18 +277,16 @@ export class Cosmopark {
           command: [
             'start',
             `--home=/opt`,
-            `--log_level=debug`,
+            `--log_format=json`,
             `--pruning=nothing`,
-            `--log_format=${network.loglevel || 'info'}`,
+            `--log_level=${network.loglevel || 'info'}`,
             ...(network.trace ? ['--trace'] : []),
           ],
           entrypoint: [network.binary],
           volumes: [`${name}:/opt`],
           ...(i === 0 && {
             ports: [
-              `${service_interface}${
-                portOffset + networkCounter + 26657
-              }:26657`,
+              `${service_interface}${portOffset + networkCounter + 26657}:26657`,
               `${service_interface}${portOffset + networkCounter + 1317}:1317`,
               `${service_interface}${portOffset + networkCounter + 9090}:9090`,
             ],
@@ -337,7 +335,7 @@ export class Cosmopark {
         }
 
         let environment: Record<string, string | number | boolean> = {
-          NODE: `${neutronNetwork}_val1`,
+          NODE: `${targetNetwork}_val1`,
           LOGGER_LEVEL: relayer.log_level,
           RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX:
             this.config.networks[neutronNetwork].prefix,
@@ -347,7 +345,7 @@ export class Cosmopark {
           RELAYER_NEUTRON_CHAIN_SIGN_KEY_NAME: `relayer_${index}`,
           RELAYER_NEUTRON_CHAIN_GAS_PRICES: `0.5${this.config.networks[neutronNetwork].denom}`,
           RELAYER_NEUTRON_CHAIN_GAS_ADJUSTMENT: 1.5,
-          RELAYER_NEUTRON_CHAIN_DENOM:'untrn',
+          RELAYER_NEUTRON_CHAIN_DENOM: 'untrn',
           RELAYER_NEUTRON_CHAIN_MAX_GAS_PRICE: 1000,
           RELAYER_NEUTRON_CHAIN_GAS_PRICE_MULTIPLIER: 1.1,
           RELAYER_NEUTRON_CHAIN_CONNECTION_ID: `connection-${id}`,

@@ -122,13 +122,23 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
           `${this.config.binary} ${this.commands.addGenesisAccount} ${name} ${wallet.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
       );
     }
+    if (this.config.accounts) {
+      //add accounts and their balances
+      for (const account of this.config.accounts) {
+        await this.execInAllValidators(
+          () =>
+            `${this.config.binary} ${this.commands.addGenesisAccount} ${account.address} ${account.balance}${this.config.denom} --home=/opt --keyring-backend=test`,
+        );
+      }
+    }
+    const validatorsStake = this.config.validators_stake;
     //gentx
     await this.execInAllValidators(
       (n: number) =>
         `${this.config.binary} ${this.commands.gentx} val${n + 1} ${
-          Array.isArray(validatorBalance)
-            ? validatorBalance[n]
-            : validatorBalance
+          Array.isArray(validatorsStake)
+            ? validatorsStake[n]
+            : validatorsStake
         }${this.config.denom} --home=/opt --keyring-backend=test --chain-id=${
           this.config.chain_id
         }`,
@@ -189,12 +199,6 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       ...(this.config.config_opts || {}),
     });
 
-    if (this.config.app_opts) {
-      await this.prepareTOML(
-        `${tempDir}/___app.toml.tmp`,
-        this.config.app_opts,
-      );
-    }
     //copy configs
     this.logger.debug(`Copying configs`);
 
@@ -202,11 +206,23 @@ export class CosmoparkDefaultChain implements CosmoparkChain {
       `cp ${tempDir}/___genesis.json.tmp $CONTAINER:/opt/config/genesis.json`,
     );
     await this.execForAllValidatorsContainers(
-      `cp ${tempDir}/___app.toml.tmp $CONTAINER:/opt/config/app.toml`,
-    );
-    await this.execForAllValidatorsContainers(
       `cp ${tempDir}/___config.toml.tmp $CONTAINER:/opt/config/config.toml`,
     );
+
+    const oracleAddress = this.config.oracle_addresses;
+    if (this.config.app_opts) {
+      for (let i = 0; i < this.config.validators; i++) {
+        await this.prepareTOML(`${tempDir}/___app.toml.tmp`, {
+          ...this.config.app_opts,
+          'oracle.oracle_address': Array.isArray(oracleAddress) ? oracleAddress[i] : oracleAddress,
+        });
+        await dockerCommand(
+          `cp ${tempDir}/___app.toml.tmp ${
+            this.containers[`${this.network}_val${i + 1}`]
+          }:/opt/config/app.toml`,
+        );
+      }
+    }
 
     //upload files
     if (this.config.upload) {
